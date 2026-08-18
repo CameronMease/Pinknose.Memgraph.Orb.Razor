@@ -1798,6 +1798,9 @@ function subscribe(handle, subscribedEvents) {
             let kind = subject ? "node" : null;
 
             if (!subject && point) {
+                // getNearestEdge(point, minDistance = 3) — the default threshold means
+                // empty space resolves to nothing rather than the nearest edge on screen.
+                // Do not pass a threshold; Orb's default is what its own click path uses.
                 subject = view.data.getNearestEdge(point);
                 kind = subject ? "edge" : null;
             }
@@ -2835,9 +2838,20 @@ git commit -m "test: add Playwright smoke suite for the interop layer"
 
 Not part of this plan, tracked for later:
 
-- **Source-generated `JsonSerializerContext` + a trimmed WASM sample to verify it.** Task 5
-  ships reflection-based serialization; the spec's WASM trim-safety claim is unproven until
-  this is done. Highest-priority item on this list.
+- **A trimmed WASM sample, plus the source-generated `JsonSerializerContext` it would
+  validate.** Highest-priority item on this list. Nothing in this plan exercises IL
+  trimming — the sample is Blazor Server and is only ever `dotnet run`, never published —
+  so two separate trim-safety claims are currently unproven:
+  1. **Serialization.** Task 5 ships reflection-based `JsonSerializerOptions` instead of the
+     source-generated context the spec's D5 calls for.
+  2. **`[JSInvokable]` parameter binding.** Task 1 verified that `OrbEventPayload` binds as a
+     typed parameter, but only on Server, untrimmed. If the trimmer strips property
+     metadata the deserializer needs, Task 8's relay signature is the thing that breaks, and
+     the fallback is `HandleOrbEvent(string type, string payloadJson)` deserializing by hand.
+
+  Both must be settled before the library is advertised as WASM-safe (spec D13,
+  `<SupportedPlatform Include="browser" />`). Adding a WASM sample host and publishing it
+  trimmed exercises both at once.
 - NuGet packaging metadata (`PackageId`, description, license, repository URL)
 - README beyond its current single heading
 - Removing the stray root-level `orb.min.js`, `memgraph-orb-1.0.2.tgz`, and gitignoring `package.json`/`package-lock.json`
