@@ -1784,14 +1784,24 @@ function subscribe(handle, subscribedEvents) {
                          "edge-hover-enter", "edge-hover-leave"].some((t) => wanted.has(t));
 
     if (hoverWanted) {
-        // Orb fires hover per mousemove. Only transitions are marshalled, so sweeping across
-        // a node costs two messages instead of one per frame.
+        // Orb's DefaultEventStrategy.onMouseMove only ever calls getNearestNode — it never
+        // hit-tests edges. So mouse-move's `subject` is node-or-nothing, and the native
+        // edge-hover event is gated on that same strategy and never fires either. Verified
+        // empirically and in orb's strategy.js (Task 1 spike). We therefore hit-test
+        // ourselves off the public view.data facade.
         let hoveredId = null;
         let hoveredKind = null;
 
         view.events.on("mouse-move", (e) => {
-            const subject = e.subject;
-            const kind = classify(subject);
+            const point = e.localPoint;
+            let subject = point ? view.data.getNearestNode(point) : null;
+            let kind = subject ? "node" : null;
+
+            if (!subject && point) {
+                subject = view.data.getNearestEdge(point);
+                kind = subject ? "edge" : null;
+            }
+
             const id = subject ? String(subject.id) : null;
 
             if (id === hoveredId) {
