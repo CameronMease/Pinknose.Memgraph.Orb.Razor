@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Local artifacts from vendoring @memgraph/orb (the bundle itself lives in
+# Pinknose.Memgraph.Orb.Razor/wwwroot/vendor/ and IS tracked).
+/orb.min.js
+/memgraph-orb-*.tgz
+/package.json
+/package-lock.json
