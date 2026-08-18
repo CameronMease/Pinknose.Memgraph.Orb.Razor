@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace Pinknose.Memgraph.Orb.Razor.Tests.Model;
 
 [TestClass]
@@ -42,5 +45,18 @@ public class OrbStyleTests
     public void LineStyle_CustomRejectsEmptyPattern()
     {
         Assert.ThrowsExactly<ArgumentException>(() => OrbEdgeLineStyle.Custom());
+    }
+
+    [TestMethod]
+    public void RendererType_SerializesToOrbsExactStrings()
+    {
+        // Guards a real trap: plain camelCase turns "WebGl" into "webGl", which Orb
+        // ignores. The [JsonStringEnumMemberName] attribute is what makes this pass.
+        var options = new JsonSerializerOptions();
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+
+        Assert.AreEqual("\"webgl\"", JsonSerializer.Serialize(OrbRendererType.WebGl, options));
+        Assert.AreEqual("\"canvas\"", JsonSerializer.Serialize(OrbRendererType.Canvas, options));
+        Assert.AreEqual("\"triangleDown\"", JsonSerializer.Serialize(OrbNodeShape.TriangleDown, options));
     }
 }
