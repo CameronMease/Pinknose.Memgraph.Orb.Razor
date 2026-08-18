@@ -370,8 +370,23 @@ public class OrbStyleTests
     {
         Assert.ThrowsExactly<ArgumentException>(() => OrbEdgeLineStyle.Custom());
     }
+
+    [TestMethod]
+    public void RendererType_SerializesToOrbsExactStrings()
+    {
+        // Guards a real trap: plain camelCase turns "WebGl" into "webGl", which Orb
+        // ignores. The [JsonStringEnumMemberName] attribute is what makes this pass.
+        var options = new JsonSerializerOptions();
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+
+        Assert.AreEqual("\"webgl\"", JsonSerializer.Serialize(OrbRendererType.WebGl, options));
+        Assert.AreEqual("\"canvas\"", JsonSerializer.Serialize(OrbRendererType.Canvas, options));
+        Assert.AreEqual("\"triangleDown\"", JsonSerializer.Serialize(OrbNodeShape.TriangleDown, options));
+    }
 }
 ```
+
+This test file needs `using System.Text.Json;` and `using System.Text.Json.Serialization;`.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -383,16 +398,30 @@ Expected: FAIL — `OrbEdgeLineStyle` does not exist, style properties missing.
 `Model/Enums.cs`:
 
 ```csharp
+using System.Text.Json.Serialization;
+
 namespace Pinknose.Memgraph.Orb.Razor;
 
 public enum OrbNodeShape { Circle, Dot, Square, Diamond, Triangle, TriangleDown, Star, Hexagon }
 
-public enum OrbRendererType { Canvas, WebGl }
+public enum OrbRendererType
+{
+    Canvas,
+
+    // JsonNamingPolicy.CamelCase would turn "WebGl" into "webGl" — it only lowercases the
+    // leading uppercase run, and stops at the 'e'. Orb's RendererType wants "webgl", so the
+    // wire value is pinned explicitly rather than renaming the member to "Webgl".
+    [JsonStringEnumMemberName("webgl")]
+    WebGl
+}
 
 public enum OrbLayoutOrientation { Horizontal, Vertical }
 
 public enum OrbAnchor { Start, Center, End }
 ```
+
+Verified: with `JsonStringEnumConverter(JsonNamingPolicy.CamelCase)`, this emits `"webgl"` for
+`WebGl` and `"canvas"` for `Canvas`, while `TriangleDown` still emits `"triangleDown"`.
 
 - [ ] **Step 4: Write the line-style union**
 
@@ -495,7 +524,7 @@ public sealed class OrbEdgeStyle
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbStyleTests"`
-Expected: PASS, 5 tests.
+Expected: PASS, 6 tests.
 
 - [ ] **Step 7: Commit**
 
