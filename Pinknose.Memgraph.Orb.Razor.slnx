@@ -2,5 +2,8 @@
   <Folder Name="/samples/">
     <Project Path="samples/Pinknose.Memgraph.Orb.Razor.SampleHost/Pinknose.Memgraph.Orb.Razor.SampleHost.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Pinknose.Memgraph.Orb.Razor.Tests/Pinknose.Memgraph.Orb.Razor.Tests.csproj" />
+  </Folder>
   <Project Path="Pinknose.Memgraph.Orb.Razor/Pinknose.Memgraph.Orb.Razor.csproj" />
 </Solution>
