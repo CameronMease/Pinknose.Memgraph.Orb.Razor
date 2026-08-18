@@ -1,0 +1,42 @@
+@page "/orb-demo"
+@rendermode InteractiveServer
+
+<PageTitle>Orb Demo</PageTitle>
+
+<h1>Orb Demo</h1>
+
+<p>Sample rendering of <code>Pinknose.Memgraph.Orb.Razor.OrbGraph</code>.</p>
+
+<OrbGraph Height="600px" DataJson="@DemoDataJson" SettingsJson="@DemoSettingsJson" />
+
+@code {
+    private const string DemoDataJson = """
+{
+  "nodes": [
+    { "id": "n1", "label": "Alice" },
+    { "id": "n2", "label": "Bob" },
+    { "id": "n3", "label": "Carol" }
+  ],
+  "edges": [
+    { "id": "e1", "start": "n1", "end": "n2", "label": "KNOWS" },
+    { "id": "e2", "start": "n2", "end": "n3", "label": "WORKS_WITH" }
+  ]
+}
+""";
+
+    private const string DemoSettingsJson = """
+{
+  "render": {
+    "labelsIsEnabled": true,
+    "shadowIsEnabled": true
+  },
+  "interaction": {
+    "isDragEnabled": true,
+    "isZoomEnabled": true
+  },
+  "layout": {
+    "type": "force"
+  }
+}
+""";
+}

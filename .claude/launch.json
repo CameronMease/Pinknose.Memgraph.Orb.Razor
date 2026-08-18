@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sample-host",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "samples/Pinknose.Memgraph.Orb.Razor.SampleHost/Pinknose.Memgraph.Orb.Razor.SampleHost.csproj",
+        "--launch-profile",
+        "http"
+      ],
+      "port": 5053
+    }
+  ]
+}

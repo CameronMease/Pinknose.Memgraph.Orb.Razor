@@ -1,0 +1,95 @@
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JsRuntime
+
+<div @ref="_hostElement" class="@CssClass" style="@HostStyle"></div>
+
+@code {
+    private const string ModuleUrl = "./_content/Pinknose.Memgraph.Orb.Razor/orbGraph.js";
+    private const string DefaultScriptUrl = "./_content/Pinknose.Memgraph.Orb.Razor/vendor/memgraph/orb/1.0.2/orb.min.js";
+
+    // Must match wwwroot/vendor/memgraph/orb/1.0.2/orb.min.js.sha384.
+    private const string DefaultScriptIntegrity = "sha384-/bdC+Sgoda/KpkiTPljaZXPEpNJg712oGud22zh7zsoVZch3PRsvcjfqNLRCaIoT";
+
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _orbHandle;
+    private ElementReference _hostElement;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string Width { get; set; } = "100%";
+
+    [Parameter]
+    public string Height { get; set; } = "500px";
+
+    /// <summary>
+    /// Graph data as JSON, shaped as Orb's <c>IGraphData</c>: <c>{ "nodes": [{ "id": ... }],
+    /// "edges": [{ "id": ..., "start": ..., "end": ... }] }</c>.
+    /// </summary>
+    [Parameter]
+    public string? DataJson { get; set; }
+
+    /// <summary>
+    /// View settings as JSON, shaped as Orb's <c>IOrbViewSettingsInit</c>
+    /// (<c>render</c>, <c>interaction</c>, <c>layout</c>, <c>strategy</c>, ...).
+    /// </summary>
+    [Parameter]
+    public string? SettingsJson { get; set; }
+
+    [Parameter]
+    public string ScriptUrl { get; set; } = DefaultScriptUrl;
+
+    [Parameter]
+    public string ScriptIntegrity { get; set; } = DefaultScriptIntegrity;
+
+    [Parameter]
+    public string? StyleUrl { get; set; }
+
+    private string CssClass => string.IsNullOrWhiteSpace(Class) ? "orb-graph" : $"orb-graph {Class}";
+    private string HostStyle => $"width:{Width};height:{Height};";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", ModuleUrl);
+
+        _orbHandle = await _module.InvokeAsync<IJSObjectReference>(
+            "initializeOrb",
+            _hostElement,
+            ScriptUrl,
+            ScriptIntegrity,
+            StyleUrl,
+            DataJson,
+            SettingsJson);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null && _orbHandle is not null)
+            {
+                await _module.InvokeVoidAsync("disposeOrb", _orbHandle);
+            }
+
+            if (_orbHandle is not null)
+            {
+                await _orbHandle.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}
