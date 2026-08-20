@@ -609,6 +609,8 @@ Expected: FAIL — `OrbSettings` does not exist.
 `Model/OrbSettings.cs`:
 
 ```csharp
+using System.Text.Json.Serialization;
+
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>Mirrors Orb's <c>IOrbViewSettingsInit</c>. Null members fall back to Orb's defaults.</summary>
@@ -616,7 +618,13 @@ public sealed class OrbSettings
 {
     public OrbRenderSettings? Render { get; set; }
     public OrbInteractionSettings? Interaction { get; set; }
+
+    // Orb's key is "strategy"; we expose it as Selection because that is what it controls.
+    // Without this attribute the property would serialize as "selection" and Orb would
+    // silently ignore every selection setting.
+    [JsonPropertyName("strategy")]
     public OrbSelectionSettings? Selection { get; set; }
+
     public OrbLayout? Layout { get; set; }
     public int? ZoomFitTransitionMs { get; set; }
     public bool? IsOutOfBoundsDragEnabled { get; set; }
@@ -662,6 +670,8 @@ public sealed class OrbSelectionSettings
 `Model/OrbLayout.cs`:
 
 ```csharp
+using System.Text.Json.Serialization;
+
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>Base for Orb's layout union. Serializes to <c>{ type, options }</c>.</summary>
@@ -682,12 +692,18 @@ public sealed class OrbForceLayout : OrbLayout
     public bool? IsSimulatingOnDataUpdate { get; set; }
     public bool? IsSimulatingOnSettingsUpdate { get; set; }
     public bool? IsSimulatingOnUnstick { get; set; }
+
+    // Orb's key is "useGPU". CamelCase would render UseGpu as "useGpu" (it lowercases only
+    // the leading uppercase run), so the wire name is pinned.
+    [JsonPropertyName("useGPU")]
     public bool? UseGpu { get; set; }
+
     public OrbForceLinks? Links { get; set; }
     public OrbForceManyBody? ManyBody { get; set; }
     public OrbForceCollision? Collision { get; set; }
     public OrbForceAlpha? Alpha { get; set; }
     public OrbForceCentering? Centering { get; set; }
+    public OrbForcePositioning? Positioning { get; set; }
 }
 
 public sealed class OrbGridLayout : OrbLayout
@@ -731,6 +747,26 @@ public sealed class OrbForceManyBody
     public double? Theta { get; set; }
     public double? DistanceMin { get; set; }
     public double? DistanceMax { get; set; }
+    public bool? EdgeMidpointRepulsion { get; set; }
+}
+
+/// <summary>Mirrors Orb's <c>IForceLayoutPositioning</c> — per-axis pinning forces.</summary>
+public sealed class OrbForcePositioning
+{
+    public OrbForceXPosition? ForceX { get; set; }
+    public OrbForceYPosition? ForceY { get; set; }
+}
+
+public sealed class OrbForceXPosition
+{
+    public double? X { get; set; }
+    public double? Strength { get; set; }
+}
+
+public sealed class OrbForceYPosition
+{
+    public double? Y { get; set; }
+    public double? Strength { get; set; }
 }
 
 public sealed class OrbForceCollision
@@ -759,7 +795,7 @@ public sealed class OrbForceCentering
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbSettingsTests"`
-Expected: PASS, 4 tests.
+Expected: PASS, 5 tests.
 
 - [ ] **Step 6: Commit**
 
@@ -869,6 +905,28 @@ public class OrbSerializationTests
         });
 
         Assert.AreEqual("""{"layout":{"type":"grid","options":{"rowGap":40}}}""", json);
+    }
+
+    [TestMethod]
+    public void RenamedAndAcronymKeys_UseOrbsExactWireNames()
+    {
+        // Three keys do NOT follow from plain camelCase and are pinned with
+        // [JsonPropertyName]. Each was a silent-drop bug before it was pinned:
+        // Orb ignores an unrecognised key rather than failing.
+        var json = OrbJson.SerializeSettings(new OrbSettings
+        {
+            Selection = new OrbSelectionSettings { IsDefaultSelectEnabled = false },
+            Render = new OrbRenderSettings { Type = OrbRendererType.WebGl },
+            Layout = new OrbForceLayout { UseGpu = true }
+        });
+
+        StringAssert.Contains(json, "\"strategy\":{\"isDefaultSelectEnabled\":false}");
+        StringAssert.Contains(json, "\"type\":\"webgl\"");
+        StringAssert.Contains(json, "\"useGPU\":true");
+
+        Assert.IsFalse(json.Contains("\"selection\""), "Orb's key is 'strategy', not 'selection'");
+        Assert.IsFalse(json.Contains("\"useGpu\""), "Orb's key is 'useGPU'");
+        Assert.IsFalse(json.Contains("\"webGl\""), "Orb's renderer value is 'webgl'");
     }
 
     [TestMethod]
@@ -1134,7 +1192,7 @@ internal static class OrbJson
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbSerializationTests"`
-Expected: PASS, 8 tests.
+Expected: PASS, 9 tests.
 
 - [ ] **Step 7: Commit**
 
@@ -1525,7 +1583,7 @@ internal static class OrbGraphDiff
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbGraphDiffTests"`
-Expected: PASS, 4 tests.
+Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Commit**
 
