@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using static Microsoft.Playwright.Assertions;
 
@@ -54,8 +54,17 @@ public class OrbGraphSmokeTests
         }
         """;
 
+    // The two sample pages render the same OrbDemoView component and differ only by render
+    // mode, so every test below runs against both: anything that passes on one and fails on
+    // the other is a real Blazor Server vs WebAssembly difference in the library, not a
+    // difference between two hand-maintained demo pages.
+    private const string ServerRoute = "/orb-server";
+    private const string WasmRoute = "/orb-wasm";
+
     private static IPlaywright _playwright = null!;
     private static IBrowser _browser = null!;
+
+    private readonly List<string> _consoleErrors = [];
 
     private IBrowserContext _context = null!;
     private IPage _page = null!;
@@ -75,15 +84,20 @@ public class OrbGraphSmokeTests
     }
 
     [TestInitialize]
-    public async Task GoToDemoAsync()
+    public async Task OpenPageAsync()
     {
         _context = await _browser.NewContextAsync();
         _page = await _context.NewPageAsync();
-
-        await _page.GotoAsync($"{SampleHostFixture.BaseUrl}/orb-demo");
-        await _page.WaitForFunctionAsync("() => !!document.querySelector('.orb-graph canvas')");
-        // Let the force simulation settle so pixel and position reads are stable.
-        await _page.WaitForTimeoutAsync(2000);
+        _page.Console += (_, message) =>
+        {
+            if (message.Type == "error")
+            {
+                lock (_consoleErrors)
+                {
+                    _consoleErrors.Add(message.Text);
+                }
+            }
+        };
     }
 
     [TestCleanup]
@@ -92,25 +106,68 @@ public class OrbGraphSmokeTests
         await _context.CloseAsync();
     }
 
-    [TestMethod]
-    public async Task Graph_RendersANonBlankCanvas()
+    private async Task GoToAsync(string route)
     {
+        await _page.GotoAsync($"{SampleHostFixture.BaseUrl}{route}");
+        // WebAssembly has to download and start the runtime before it renders anything, which
+        // is far slower than a Server circuit -- especially on the first test to hit it.
+        await _page.WaitForFunctionAsync(
+            "() => !!document.querySelector('.orb-graph canvas')",
+            null,
+            new PageWaitForFunctionOptions { Timeout = 60_000 });
+        // Let the force simulation settle so pixel and position reads are stable.
+        await _page.WaitForTimeoutAsync(2000);
+    }
+
+    // Everything else in this class assumes the two routes really are Server and WebAssembly.
+    // Nothing else proves it: a page whose @rendermode silently stopped taking effect would
+    // still render a graph (the other render mode would just pick it up) and every test here
+    // would keep passing while quietly testing the same mode twice.
+    [TestMethod]
+    public async Task TheTwoRoutes_ActuallyRunInDifferentRenderModes()
+    {
+        await GoToAsync(WasmRoute);
+        Assert.IsTrue(
+            await LoadedTheWebAssemblyRuntimeAsync(),
+            "/orb-wasm did not load the WebAssembly runtime, so it is not running client-side");
+
+        await GoToAsync(ServerRoute);
+        Assert.IsFalse(
+            await LoadedTheWebAssemblyRuntimeAsync(),
+            "/orb-server loaded the WebAssembly runtime, so it is not running on a circuit");
+    }
+
+    [TestMethod]
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task Graph_RendersANonBlankCanvas(string route)
+    {
+        await GoToAsync(route);
+
         var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
 
         Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
     }
 
     [TestMethod]
-    public async Task ClickingANode_RaisesOnNodeClickWithTheOriginalInstance()
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task ClickingANode_RaisesOnNodeClickWithTheOriginalInstance(string route)
     {
+        await GoToAsync(route);
+
         await ClickFirstNodeAsync();
 
         await Expect(_page.Locator("#selection-label")).Not.ToHaveTextAsync("none");
     }
 
     [TestMethod]
-    public async Task HoveringANode_RaisesEnterThenLeave()
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task HoveringANode_RaisesEnterThenLeave(string route)
     {
+        await GoToAsync(route);
+
         var box = await _page.Locator(".orb-graph canvas").BoundingBoxAsync();
         var position = await FindNodePointAsync();
 
@@ -122,8 +179,12 @@ public class OrbGraphSmokeTests
     }
 
     [TestMethod]
-    public async Task RemovingANode_DropsItAndItsEdge()
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task RemovingANode_DropsItAndItsEdge(string route)
     {
+        await GoToAsync(route);
+
         var before = await _page.EvaluateAsync<int>(
             "() => window.__orbTestView.data.getNodeCount()");
 
@@ -138,8 +199,12 @@ public class OrbGraphSmokeTests
     }
 
     [TestMethod]
-    public async Task UpdatingNodes_PreservesExistingPositions()
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task UpdatingNodes_PreservesExistingPositions(string route)
     {
+        await GoToAsync(route);
+
         var before = await ReadPositionAsync("n1");
 
         var nodeCountBefore = await _page.EvaluateAsync<int>(
@@ -176,20 +241,98 @@ public class OrbGraphSmokeTests
     }
 
     [TestMethod]
-    public async Task UnstyledNodesAndEdges_RenderWithOrbsDefaultStyleNotZeroed()
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task UnstyledNodesAndEdges_RenderWithOrbsDefaultStyleNotZeroed(string route)
     {
-        // This test navigates itself, unlike the others above which rely on the
-        // [TestInitialize] navigation to /orb-demo: the regression under test only
-        // reproduces for nodes/edges with neither Label nor Style set, and /orb-demo's
-        // Person always sets Style while its Relationship always sets Label.
-        await _page.GotoAsync($"{SampleHostFixture.BaseUrl}/orb-unstyled");
-        await _page.WaitForFunctionAsync("() => !!document.querySelector('.orb-graph canvas')");
-        await _page.WaitForTimeoutAsync(2000);
+        // ?styled=false makes OrbDemoView build its nodes and edges with neither Label nor
+        // Style set, which is the only case that reproduces the regression below. It has to
+        // be set on the initial navigation rather than by clicking the toggle, because the
+        // regression is about the FIRST push for a node that never had a style.
+        await GoToAsync($"{route}?styled=false");
 
         // Regression: pushStyles() used to push {} for nodes/edges with no projected style,
         // wholesale-replacing the default OrbView's constructor had just applied via
         // setDefaultStyle()/_applyStyle(). That left getRadius() === 0 (invisible, unhittable)
         // and getWidth() === 0 (edge never drawn). Assert Orb's real default survived instead.
+        await AssertOrbDefaultStyleSurvivedAsync();
+
+        var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
+        Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
+    }
+
+    [TestMethod]
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task ClearingAStyleAfterItWasApplied_FallsBackToOrbsDefault(string route)
+    {
+        await GoToAsync(route);
+
+        // The styled graph gives Alice radius 12 and everyone else 8, so "all radii equal"
+        // below is only true once the styles have actually been cleared.
+        var styledRadii = await ReadRadiiAsync();
+        Assert.AreNotEqual(
+            1,
+            styledRadii.Distinct().Count(),
+            "precondition: the styled graph must not already have uniform radii");
+
+        await _page.ClickAsync("#style-toggle-btn");
+        await Expect(_page.Locator("#style-state")).ToHaveTextAsync("unstyled");
+        await _page.WaitForTimeoutAsync(500);
+
+        // Two failure modes at once: pushing {} would zero these (the radius-0 regression),
+        // and skipping the push entirely would leave the old per-node style painted, which
+        // the uniformity check below catches.
+        await AssertOrbDefaultStyleSurvivedAsync();
+
+        var clearedRadii = await ReadRadiiAsync();
+        Assert.AreEqual(
+            1,
+            clearedRadii.Distinct().Count(),
+            "clearing every style must leave every node on Orb's single default size, but "
+                + $"the radii were [{string.Join(", ", clearedRadii)}]");
+    }
+
+    [TestMethod]
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task NavigatingAway_DisposesWithoutError(string route)
+    {
+        await GoToAsync(route);
+
+        await _page.ClickAsync("a.navbar-brand");
+        await Expect(_page.Locator("h1")).ToHaveTextAsync("Orb sample host");
+
+        // Blazor Server shows this banner when a circuit dies, and WebAssembly shows it on an
+        // unhandled client exception. A teardown exception in OrbGraph.DisposeAsync trips it
+        // either way, even if nothing reached console.error.
+        await Expect(_page.Locator("#blazor-error-ui")).ToBeHiddenAsync();
+
+        // The two render modes put a teardown exception in different places, so each route
+        // asserts on the log that actually receives one. Under Server it is the host's log
+        // (whether it also reaches the browser console depends on client-side log wiring and
+        // DetailedErrors, neither of which the test controls); under WebAssembly the
+        // component runs in the browser and there is no circuit, so the console is the only
+        // place it can land.
+        if (route == ServerRoute)
+        {
+            StringAssert.DoesNotMatch(
+                SampleHostFixture.HostOutput,
+                new Regex("Unhandled exception", RegexOptions.IgnoreCase));
+        }
+        else
+        {
+            lock (_consoleErrors)
+            {
+                Assert.IsEmpty(
+                    _consoleErrors,
+                    $"disposal logged to the browser console: {string.Join(" | ", _consoleErrors)}");
+            }
+        }
+    }
+
+    private async Task AssertOrbDefaultStyleSurvivedAsync()
+    {
         var allNodesHaveRadius = await _page.EvaluateAsync<bool>(
             "() => window.__orbTestView.data.getNodes().every(n => n.getRadius() > 0)");
         Assert.IsTrue(allNodesHaveRadius, "every unstyled node must render at a non-zero radius");
@@ -197,28 +340,24 @@ public class OrbGraphSmokeTests
         var allEdgesHaveWidth = await _page.EvaluateAsync<bool>(
             "() => window.__orbTestView.data.getEdges().every(e => e.getWidth() > 0)");
         Assert.IsTrue(allEdgesHaveWidth, "every unstyled edge must render at a non-zero width");
-
-        var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
-        Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
     }
 
-    [TestMethod]
-    public async Task NavigatingAway_DisposesWithoutServerError()
+    private async Task<double[]> ReadRadiiAsync()
     {
-        await _page.ClickAsync("a[href='counter']");
-        await Expect(_page.Locator("h1")).ToHaveTextAsync("Counter");
+        var json = await _page.EvaluateAsync<string>(
+            "() => JSON.stringify(window.__orbTestView.data.getNodes().map(n => n.getRadius()))");
 
-        // Blazor Server shows this banner when a circuit dies. A teardown exception in
-        // OrbGraph.DisposeAsync would kill the circuit even if nothing reached
-        // console.error, so check it in addition to the server log below.
-        await Expect(_page.Locator("#blazor-error-ui")).ToBeHiddenAsync();
+        return System.Text.Json.JsonSerializer.Deserialize<double[]>(json)!;
+    }
 
-        // Whether a teardown exception reaches the browser console depends on client-side
-        // log wiring and DetailedErrors, neither of which the test controls. The server log
-        // is where an unhandled exception in a component's DisposeAsync unconditionally
-        // lands, so assert there instead of (only) on Page.Console.
-        var output = SampleHostFixture.HostOutput;
-        StringAssert.DoesNotMatch(output, new Regex("Unhandled exception", RegexOptions.IgnoreCase));
+    private async Task<bool> LoadedTheWebAssemblyRuntimeAsync()
+    {
+        // dotnet.js is fetched only when Blazor boots the WebAssembly runtime for the page.
+        return await _page.EvaluateAsync<bool>(
+            """
+            () => performance.getEntriesByType('resource')
+                .some(e => /_framework\/dotnet\..*\.js/.test(e.name))
+            """);
     }
 
     private async Task ClickFirstNodeAsync()

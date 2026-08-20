@@ -1,0 +1,135 @@
+@inject NavigationManager Nav
+
+@* The entire demo surface lives here, in the WebAssembly project, so that BOTH sample pages
+   render the exact same component and can only differ by @rendermode. Anything added to the
+   demo -- new controls, new graph operations -- must go in this file, never in a page:
+   OrbSamplePagesTests enforces that the pages stay thin wrappers. *@
+
+<p>
+    Selected: <strong id="selection-label">@(_selected?.FullName ?? "none")</strong> |
+    Hovered: <strong id="hover-label">@(_hovered?.FullName ?? "none")</strong> |
+    Styles: <strong id="style-state">@(_styled ? "styled" : "unstyled")</strong>
+</p>
+
+<button id="recenter-btn" class="btn btn-secondary" @onclick="RecenterAsync">Recenter</button>
+<button id="remove-btn" class="btn btn-secondary" @onclick="RemoveCarol">Remove Carol</button>
+<button id="style-toggle-btn" class="btn btn-secondary" @onclick="ToggleStyles">
+    @(_styled ? "Clear styles" : "Apply styles")
+</button>
+
+<OrbGraph TNode="Person" TEdge="Relationship"
+          @ref="_graph"
+          Nodes="@_people"
+          Edges="@_relationships"
+          Height="600px"
+          class="border rounded"
+          data-orb-test="true"
+          Settings="@_settings"
+          OnNodeClick="@(e => _selected = e.Node)"
+          OnNodeHoverEnter="@(e => _hovered = e.Node)"
+          OnNodeHoverLeave="@(_ => _hovered = null)" />
+
+@code {
+    // Styled == false makes both Label and Style null, which is the case that must fall back
+    // to Orb's own default style rather than rendering at radius 0 / width 0.
+    private sealed record Person(string EmployeeId, string FullName, bool IsManager, bool Styled)
+        : IOrbNode
+    {
+        public string Id => EmployeeId;
+
+        public string? Label => Styled ? FullName : null;
+
+        public OrbNodeStyle? Style => Styled
+            ? new OrbNodeStyle
+            {
+                Color = IsManager ? "#cc3333" : "#3399cc",
+                Size = IsManager ? 12 : 8
+            }
+            : null;
+    }
+
+    private sealed record Relationship(string Id, string Start, string End, string Kind, bool Styled)
+        : IOrbEdge
+    {
+        public string? Label => Styled ? Kind : null;
+    }
+
+    private OrbGraph<Person, Relationship>? _graph;
+    private Person? _selected;
+    private Person? _hovered;
+    private bool _styled = true;
+
+    private List<Person> _people = [];
+    private List<Relationship> _relationships = [];
+
+    private readonly OrbSettings _settings = new()
+    {
+        Render = new OrbRenderSettings { LabelsIsEnabled = true, ShadowIsEnabled = true },
+        Interaction = new OrbInteractionSettings { IsDragEnabled = true, IsZoomEnabled = true },
+        Layout = new OrbForceLayout()
+    };
+
+    protected override void OnInitialized()
+    {
+        // Read ?styled=false here rather than via [SupplyParameterFromQuery], which Blazor
+        // only supports on routable (@page) components -- declaring it on the pages would
+        // put a feature back into them and let the two drift apart.
+        _styled = !string.Equals(
+            QueryValue(Nav.Uri, "styled"),
+            "false",
+            StringComparison.OrdinalIgnoreCase);
+
+        _people =
+        [
+            new("n1", "Alice", true, _styled),
+            new("n2", "Bob", false, _styled),
+            new("n3", "Carol", false, _styled)
+        ];
+
+        _relationships =
+        [
+            new("e1", "n1", "n2", "KNOWS", _styled),
+            new("e2", "n2", "n3", "WORKS_WITH", _styled)
+        ];
+    }
+
+    private async Task RecenterAsync()
+    {
+        if (_graph is not null)
+        {
+            await _graph.RecenterAsync();
+        }
+    }
+
+    private void RemoveCarol()
+    {
+        _people = [.. _people.Where(p => p.Id != "n3")];
+        _relationships = [.. _relationships.Where(r => r.Start != "n3" && r.End != "n3")];
+    }
+
+    // Rebuilds every node and edge with the flag flipped. Going styled -> unstyled is the
+    // "a style, once applied, must be clearable" path: the projector emits a null style and
+    // the JS side has to restore Orb's default instead of leaving the old one painted.
+    private void ToggleStyles()
+    {
+        _styled = !_styled;
+        _people = [.. _people.Select(p => p with { Styled = _styled })];
+        _relationships = [.. _relationships.Select(r => r with { Styled = _styled })];
+    }
+
+    private static string? QueryValue(string uri, string name)
+    {
+        var query = new Uri(uri).Query;
+
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator > 0 && Uri.UnescapeDataString(pair[..separator]) == name)
+            {
+                return Uri.UnescapeDataString(pair[(separator + 1)..]);
+            }
+        }
+
+        return null;
+    }
+}

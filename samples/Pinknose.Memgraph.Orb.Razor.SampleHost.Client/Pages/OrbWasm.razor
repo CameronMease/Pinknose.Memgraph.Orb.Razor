@@ -1,0 +1,11 @@
+@page "/orb-wasm"
+@rendermode InteractiveWebAssembly
+
+@* Thin by design: this page and OrbServer.razor must differ only by render mode, so every
+   demo feature belongs in OrbDemoView. See OrbSamplePagesTests. *@
+
+<PageTitle>Orb (WebAssembly)</PageTitle>
+
+<h1>Orb (WebAssembly)</h1>
+
+<OrbDemoView />

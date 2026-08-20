@@ -5,8 +5,10 @@ the force-directed graph visualization library from Memgraph. It gives you a typ
 component driven by your own domain types instead of hand-written JS interop.
 
 **Verification status:** exercised end-to-end (unit tests + a Playwright browser suite) under
-**Blazor Server**. **Blazor WebAssembly is untested.** Nothing here is known to break under
-WASM, but nothing has been run under it either — treat it as unverified, not unsupported.
+**both Blazor Server and Blazor WebAssembly** — the sample host serves the same demo component
+under each render mode, and every browser test runs against both. What is still unverified is
+**publish trimming**: the suite runs a development build, which does not trim, so a trimmed
+WASM publish has never been exercised.
 
 ## Minimal example
 
@@ -61,6 +63,25 @@ full re-`setup()`. `merge()` upserts in place, so nodes that already exist keep 
 simulated position instead of the graph re-laying out from scratch. Only genuinely new nodes
 get a fresh position from Orb's layout.
 
+## Sample host
+
+`samples/Pinknose.Memgraph.Orb.Razor.SampleHost` serves two pages:
+
+| Route | Render mode |
+| --- | --- |
+| `/orb-server` | `InteractiveServer` |
+| `/orb-wasm` | `InteractiveWebAssembly` (component lives in the `.Client` project) |
+
+Both render the same `OrbDemoView` component and are deliberately kept to nothing but
+`<OrbDemoView />`, so the only difference between them is the render mode — which is what makes
+"passes on one, fails on the other" a meaningful signal. A unit test enforces that. Add demo
+features to `OrbDemoView`, never to a page. Append `?styled=false` to either route to render the
+graph with no labels and no styles.
+
+```bash
+dotnet run --project samples/Pinknose.Memgraph.Orb.Razor.SampleHost
+```
+
 ## Known gaps
 
 - **`Settings` going non-null → null is currently a no-op.** Once you've supplied an
@@ -68,5 +89,9 @@ get a fresh position from Orb's layout.
   or reset anything already applied — the component only pushes a settings update when the new
   value is both non-null and different from what was last sent. If you need to change
   settings, mutate/replace the object; don't rely on nulling it out.
+- **A trimmed WebAssembly publish has never been run.** The WASM coverage above comes from a
+  development build, which does not trim. The library serializes only its own types, but
+  whether a `dotnet publish` with trimming enabled keeps everything the reflection-based
+  serializer and `[JSInvokable]` binding need is still unverified.
 - **`OrbMapView` (geo layout) is not supported.** This library wraps Orb's canvas graph view
   (`OrbView`) only. Orb's map-based view is out of scope.

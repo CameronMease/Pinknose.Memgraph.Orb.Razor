@@ -69,7 +69,7 @@ public static class SampleHostFixture
         {
             try
             {
-                var response = await client.GetAsync($"{BaseUrl}/orb-demo");
+                var response = await client.GetAsync($"{BaseUrl}/");
                 if (response.IsSuccessStatusCode)
                 {
                     return;

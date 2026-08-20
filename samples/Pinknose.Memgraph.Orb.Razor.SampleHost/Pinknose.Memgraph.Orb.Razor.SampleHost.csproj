@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <!-- Supplies AddInteractiveWebAssemblyComponents/RenderMode on the host side. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Pinknose.Memgraph.Orb.Razor\Pinknose.Memgraph.Orb.Razor.csproj" />
+    <ProjectReference Include="..\Pinknose.Memgraph.Orb.Razor.SampleHost.Client\Pinknose.Memgraph.Orb.Razor.SampleHost.Client.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

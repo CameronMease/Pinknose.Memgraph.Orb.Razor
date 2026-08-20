@@ -1,7 +1,16 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Orb sample host</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Orb sample host</h1>
 
-Welcome to your new app.
+<p>
+    Two pages render the same <code>OrbDemoView</code> component; the only difference between
+    them is the render mode, so anything that behaves differently between the two is a real
+    difference in the library under Blazor Server vs WebAssembly.
+</p>
+
+<ul>
+    <li><a href="orb-server">Orb (Server)</a> &mdash; <code>InteractiveServer</code></li>
+    <li><a href="orb-wasm">Orb (WebAssembly)</a> &mdash; <code>InteractiveWebAssembly</code></li>
+</ul>
