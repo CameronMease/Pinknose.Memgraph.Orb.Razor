@@ -2,10 +2,7 @@ name: release
 
 # Pushing a v-prefixed tag is the single act that releases. There is no version to bump
 # anywhere first: MinVer reads this tag and the package version follows from it.
-#
-# The NuGet upload is currently commented out (see below), so a tag exercises the whole chain
-# -- tests, pack, version-matches-tag, artifacts, GitHub Release -- without publishing
-# anything publicly.
+
 on:
   push:
     tags:
@@ -20,6 +17,8 @@ jobs:
       # Only for the GitHub Release step at the end; drop both if you would rather write
       # release notes by hand.
       contents: write
+      # Lets the job ask GitHub for the OIDC token that nuget.org trades for a publishing key.
+      id-token: write
 
     steps:
       - uses: actions/checkout@v7
@@ -59,20 +58,32 @@ jobs:
             exit 1
           fi
 
-      # DISABLED until we are ready to go public. Publishing to nuget.org is irreversible --
-      # a version can be unlisted but never replaced or deleted -- so it stays off while the
-      # rest of this workflow is being exercised. Everything above and below still runs, so a
-      # tag proves the whole chain except the upload itself.
+      # Trusted publishing: GitHub signs a token describing this repository and workflow,
+      # nuget.org checks it against the policy registered for this package and hands back an
+      # API key valid for one hour. No long-lived secret exists to leak or rotate. The policy
+      # names this file, so renaming it breaks publishing until the policy is updated too.
       #
-      # To enable: uncomment, and add a NUGET_API_KEY repository secret first (without it the
-      # step fails and nothing is published, but the tag and artifacts are unaffected).
-      #
-      # - name: Push to NuGet
-      #   run: >
-      #     dotnet nuget push "artifacts/*.nupkg"
-      #     --api-key ${{ secrets.NUGET_API_KEY }}
-      #     --source https://api.nuget.org/v3/index.json
-      #     --skip-duplicate
+      # Deliberately the step before the push: the key is single-use and short-lived, so it is
+      # requested as late as possible.
+      - name: Get a short-lived NuGet key
+        id: login
+        uses: NuGet/login@v1
+        with:
+          # The nuget.org profile name (not an email address), kept in a repository secret as
+          # the documentation recommends. This is not a credential -- it is public on every
+          # package page -- so a missing NUGET_USER secret fails the token exchange rather
+          # than exposing anything.
+          user: ${{ secrets.NUGET_USER }}
+
+      # Irreversible: a version pushed to nuget.org can be unlisted, but never replaced or
+      # deleted. The version-matches-tag check above is the last gate before that becomes
+      # permanent.
+      - name: Push to NuGet
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
 
       - uses: actions/upload-artifact@v4
         with:
