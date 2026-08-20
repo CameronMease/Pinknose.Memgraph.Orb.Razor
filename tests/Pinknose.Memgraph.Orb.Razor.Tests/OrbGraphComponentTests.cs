@@ -127,4 +127,22 @@ public class OrbGraphComponentTests : BunitContext
 
         Assert.AreSame(TwoNodes[0], clicked);
     }
+
+    [TestMethod]
+    public async Task ImperativeCallAfterDispose_IsSilentNoOp()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes));
+
+        var graph = cut.Instance;
+        await graph.DisposeAsync();
+
+        // Must not throw, must not reach interop, and must not hang on the readiness gate.
+        await graph.RecenterAsync();
+
+        Assert.IsFalse(module.Invocations.Identifiers.Contains("recenter"),
+            "disposal must short-circuit before the call reaches interop");
+    }
 }
