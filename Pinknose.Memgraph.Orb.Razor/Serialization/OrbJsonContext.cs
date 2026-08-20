@@ -6,7 +6,9 @@ namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>
 /// Serialization for everything crossing to JavaScript. Only library-owned types appear
-/// here, which is what keeps WASM publish-trimming safe.
+/// here, which keeps the consumer's domain types out of the payload. This is a reflection-
+/// based (non-source-generated) approach, and WASM publish-trimming safety for this path
+/// remains unverified.
 /// </summary>
 internal static class OrbJson
 {

@@ -1,7 +1,7 @@
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>Wire shape for events coming back from JavaScript.</summary>
-public sealed class OrbEventPayload
+internal sealed class OrbEventPayload
 {
     public string? Id { get; set; }
     public double LocalX { get; set; }

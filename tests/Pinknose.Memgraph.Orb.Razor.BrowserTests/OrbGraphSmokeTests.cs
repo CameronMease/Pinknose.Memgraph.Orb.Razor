@@ -192,7 +192,6 @@ public class OrbGraphSmokeTests
         // lands, so assert there instead of (only) on Page.Console.
         var output = SampleHostFixture.HostOutput;
         StringAssert.DoesNotMatch(output, new Regex("Unhandled exception", RegexOptions.IgnoreCase));
-        StringAssert.DoesNotMatch(output, new Regex("Unhandled exception in circuit", RegexOptions.IgnoreCase));
     }
 
     private async Task ClickFirstNodeAsync()

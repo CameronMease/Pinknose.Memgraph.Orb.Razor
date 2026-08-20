@@ -105,6 +105,16 @@
     private async Task InitializeAsync()
     {
         var projection = ProjectAndWarn();
+
+        if (projection is null)
+        {
+            // A duplicate id must degrade the component, not take the circuit down with
+            // it. Nothing awaiting _ready must be left hanging, so complete it with false
+            // exactly like the JSDisconnectedException/Exception paths below.
+            _ready.TrySetResult(false);
+            return;
+        }
+
         var dataJson = OrbJson.SerializeGraph(projection.Payload);
         var settingsJson = Settings is null ? null : OrbJson.SerializeSettings(Settings);
 
@@ -162,16 +172,33 @@
             }
 
             var projection = ProjectAndWarn();
+
+            if (projection is null)
+            {
+                // A duplicate id must degrade this update, not crash the circuit. Leave
+                // the id->instance maps and _lastDataJson exactly as they were: the
+                // consumer's data is invalid right now, so there is nothing valid to
+                // record, and the previous good state must keep serving events.
+                return;
+            }
+
             var dataJson = OrbJson.SerializeGraph(projection.Payload);
 
             var removedNodeIds = OrbGraphDiff.RemovedIds(_sentNodes.Keys, projection.NodesById.Keys);
             var removedEdgeIds = OrbGraphDiff.RemovedIds(_sentEdges.Keys, projection.EdgesById.Keys);
 
+            // The id->instance maps must be refreshed whenever we have a fresh projection,
+            // even if dataJson is identical to last time. The JSON only carries id/endpoints
+            // /style/label, so a consumer that reloaded Nodes with an unprojected field
+            // changed (e.g. a domain property not sent to Orb) would otherwise leave these
+            // maps pointing at superseded instances forever, and OnNodeClick etc. would keep
+            // handing back stale objects.
+            _sentNodes = projection.NodesById;
+            _sentEdges = projection.EdgesById;
+
             if (dataJson != _lastDataJson || removedNodeIds.Length > 0 || removedEdgeIds.Length > 0)
             {
                 await _module!.InvokeVoidAsync("updateData", _handle, dataJson, removedNodeIds, removedEdgeIds);
-                _sentNodes = projection.NodesById;
-                _sentEdges = projection.EdgesById;
                 _lastDataJson = dataJson;
             }
 
@@ -188,9 +215,24 @@
         }
     }
 
-    private OrbProjectionResult<TNode, TEdge> ProjectAndWarn()
+    // Returns null when the consumer's data cannot be projected (e.g. a duplicate node/edge
+    // id). This is a consumer-data problem, not an interop or lifecycle failure, so it is
+    // logged and swallowed here rather than left to propagate out of OnAfterRenderAsync --
+    // an uncaught exception there tears down the whole Blazor circuit, which is far worse
+    // than one graph failing to update. Callers must treat null as "skip this update."
+    private OrbProjectionResult<TNode, TEdge>? ProjectAndWarn()
     {
-        var projection = OrbProjector.Project(Nodes, Edges);
+        OrbProjectionResult<TNode, TEdge> projection;
+
+        try
+        {
+            projection = OrbProjector.Project(Nodes, Edges);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger?.LogError(ex, "Orb graph data could not be projected; skipping this update.");
+            return null;
+        }
 
         if (projection.DanglingEdgeIds.Count > 0)
         {

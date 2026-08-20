@@ -1,19 +1,19 @@
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>What actually crosses to JavaScript. Consumer types never do.</summary>
-public sealed class OrbGraphPayload
+internal sealed class OrbGraphPayload
 {
     public List<OrbNodePayload> Nodes { get; set; } = [];
     public List<OrbEdgePayload> Edges { get; set; } = [];
 }
 
-public sealed class OrbNodePayload
+internal sealed class OrbNodePayload
 {
     public required string Id { get; set; }
     public OrbNodeStylePayload? Style { get; set; }
 }
 
-public sealed class OrbEdgePayload
+internal sealed class OrbEdgePayload
 {
     public required string Id { get; set; }
     public required string Start { get; set; }
@@ -25,7 +25,7 @@ public sealed class OrbEdgePayload
 /// Wire shape for node styling. Mirrors <see cref="OrbNodeStyle"/> and adds <c>Label</c>,
 /// which Orb reads from the style object but which the public styling surface omits.
 /// </summary>
-public sealed class OrbNodeStylePayload
+internal sealed class OrbNodeStylePayload
 {
     public string? Label { get; set; }
     public string? Color { get; set; }
@@ -53,7 +53,7 @@ public sealed class OrbNodeStylePayload
 }
 
 /// <summary>Wire shape for edge styling. Mirrors <see cref="OrbEdgeStyle"/> plus <c>Label</c>.</summary>
-public sealed class OrbEdgeStylePayload
+internal sealed class OrbEdgeStylePayload
 {
     public string? Label { get; set; }
     public string? Color { get; set; }

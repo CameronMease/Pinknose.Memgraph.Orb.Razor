@@ -22,7 +22,14 @@ function ensureScript() {
         script.integrity = SCRIPT_INTEGRITY;
         script.crossOrigin = "anonymous";
         script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Failed to load Orb from '${SCRIPT_URL}'.`));
+        script.onerror = () => {
+            // Without this, one transient network failure poisons scriptLoad for the life
+            // of the page: every later component would await the same rejected promise
+            // and fail immediately, with no way to recover. Clearing it lets the next
+            // ensureScript() call start a fresh attempt.
+            scriptLoad = null;
+            reject(new Error(`Failed to load Orb from '${SCRIPT_URL}'.`));
+        };
         document.head.appendChild(script);
     });
 
@@ -51,19 +58,23 @@ function parseJson(value) {
 
 // Orb's _applyStyle() skips any node that already has a style, so setDefaultStyle would
 // apply exactly once per node and never repaint a changed style. Push them explicitly.
+//
+// Always call setStyle, even when the payload carries no style (node.style is undefined).
+// Orb's setStyle() replaces the node's _style wholesale and merge() never touches it, so
+// skipping the call when a style is cleared (e.g. a consumer's Style/Label goes from
+// non-null back to null) would leave the previously-applied style painted forever -- there
+// would be no way back to the unstyled look. Pushing {} is safe: a node's default _style is
+// already {} and no setDefaultStyle is ever installed, so an empty object is a real reset,
+// not a foreign shape.
 function pushStyles(view, payload) {
     const graph = view.data;
 
     for (const node of payload.nodes) {
-        if (node.style) {
-            graph.getNodeById(node.id)?.setStyle(node.style, { isNotifySkipped: true });
-        }
+        graph.getNodeById(node.id)?.setStyle(node.style ?? {}, { isNotifySkipped: true });
     }
 
     for (const edge of payload.edges) {
-        if (edge.style) {
-            graph.getEdgeById(edge.id)?.setStyle(edge.style, { isNotifySkipped: true });
-        }
+        graph.getEdgeById(edge.id)?.setStyle(edge.style ?? {}, { isNotifySkipped: true });
     }
 }
 
@@ -174,8 +185,15 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
     subscribe(handle, subscribedEvents);
     view.render(() => view.recenter());
 
-    // Test seam: the browser suite needs to inspect graph state and node positions.
-    globalThis.__orbTestView = view;
+    // Opt-in test seam: the browser suite needs to inspect graph state and node positions,
+    // but this must never ship live on a real page. Setting it unconditionally would pin
+    // the OrbView (and everything it references -- the emitter, our subscribe closures, the
+    // DotNetObjectReference, the canvas) for the document's lifetime, and with two
+    // components on one page it would be last-writer-wins. The host element opts in via
+    // data-orb-test, which the sample page sets through AdditionalAttributes.
+    if (host.hasAttribute("data-orb-test")) {
+        globalThis.__orbTestView = view;
+    }
 
     return handle;
 }
@@ -222,9 +240,22 @@ export function getSvg(handle)        { return handle ? handle.view.getSVG() : "
 export function disposeOrb(handle) {
     if (!handle) return;
 
+    // Clear the opt-in test hook if it still points at this handle's view, so a disposed
+    // component's view (and everything it roots) does not outlive the component.
+    if (globalThis.__orbTestView === handle.view) {
+        delete globalThis.__orbTestView;
+    }
+
+    // Drop our subscribe() closures (and the DotNetObjectReference they capture) before
+    // destroy(), rather than relying on destroy() to have done it -- removeAllListeners()
+    // makes that explicit instead of implicit.
+    handle.view?.events?.removeAllListeners?.();
     handle.view?.destroy();
 
     if (handle.host) {
         handle.host.innerHTML = "";
     }
+
+    handle.view = null;
+    handle.dotNetRef = null;
 }

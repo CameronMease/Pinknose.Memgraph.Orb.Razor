@@ -129,6 +129,23 @@ public class OrbGraphComponentTests : BunitContext
     }
 
     [TestMethod]
+    public void Render_WithDuplicateNodeId_DoesNotThrowAndSkipsInitialization()
+    {
+        var module = SetupModule();
+        var duplicateIdNodes = new[] { new OrbNode("n1"), new OrbNode("n1") };
+
+        // A duplicate id makes OrbProjector.Project throw. Before this fix that exception
+        // propagated out of OnAfterRenderAsync and tore down the whole Blazor circuit --
+        // the component must instead degrade quietly, the same way dangling edges do.
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, duplicateIdNodes));
+
+        Assert.IsNotNull(cut);
+        Assert.IsFalse(module.Invocations.Identifiers.Contains("initializeOrb"),
+            "a graph that failed to project must never reach the JS init call");
+    }
+
+    [TestMethod]
     public async Task ImperativeCallAfterDispose_IsSilentNoOp()
     {
         var module = SetupModule();

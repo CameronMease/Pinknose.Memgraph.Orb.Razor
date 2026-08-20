@@ -74,6 +74,14 @@ public class OrbProjectorTests
         Assert.AreSame(OrbEdgeLineStyle.Dotted, style.LineStyle);
     }
 
+    // This is the projector's half of the style-clearing contract: a node with neither
+    // Style nor Label projects a null payload style, on both the first projection and every
+    // later one (e.g. after a consumer's Style went from non-null back to null). The other
+    // half lives in orbGraph.js's pushStyles(), which must treat a null/undefined style as
+    // "push {} to reset", not "skip and leave whatever was painted before" -- Orb's
+    // setStyle() replaces wholesale and merge() never touches _style, so skipping would make
+    // a cleared style permanent. This test exists so that JS-side `?? {}` is understood to
+    // be load-bearing, not incidental.
     [TestMethod]
     public void Project_LeavesStyleNullWhenNothingToStyle()
     {
