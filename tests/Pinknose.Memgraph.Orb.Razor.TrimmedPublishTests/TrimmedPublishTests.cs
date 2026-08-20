@@ -1,5 +1,4 @@
-using System.Text.RegularExpressions;
-using Microsoft.Playwright;
+﻿using Microsoft.Playwright;
 using Pinknose.Memgraph.Orb.Razor.BrowserTests;
 using static Microsoft.Playwright.Assertions;
 
@@ -86,7 +85,10 @@ public class TrimmedPublishTests
     {
         TrimmedPublishFixture.RequireEnabled();
 
-        var warnings = LibraryTrimWarnings(TrimmedPublishFixture.PublishOutput);
+        var warnings = TrimWarningParser.WarningsByFile(
+            TrimmedPublishFixture.PublishOutput,
+            Path.Combine(TrimmedPublishFixture.RepoRoot(), "Pinknose.Memgraph.Orb.Razor")
+                + Path.DirectorySeparatorChar);
 
         // The library serializes through a source-generated JsonSerializerContext precisely so
         // this stays empty: the trimmer can follow generated metadata, and cannot follow the
@@ -168,42 +170,6 @@ public class TrimmedPublishTests
     {
         await _page.GotoAsync($"{TrimmedPublishFixture.BaseUrl}{route}");
         await _driver.WaitForGraphAsync();
-    }
-
-    // Counts distinct warning sites per library source file. Line numbers are deliberately not
-    // part of the baseline: they move whenever the file is edited, which would fail this test
-    // for reasons that have nothing to do with trimming.
-    private static Dictionary<string, int> LibraryTrimWarnings(string publishOutput)
-    {
-        var libraryDirectory = Path.Combine(
-            TrimmedPublishFixture.RepoRoot(),
-            "Pinknose.Memgraph.Orb.Razor") + Path.DirectorySeparatorChar;
-
-        var sites = new HashSet<string>();
-        var counts = new Dictionary<string, int>();
-
-        var pattern = "(?<path>[A-Za-z]:[^(\r\n]+\\.cs)\\((?<line>[0-9]+),[0-9]+\\): "
-            + "Trim analysis warning (?<code>IL[0-9]+)";
-
-        foreach (Match match in Regex.Matches(publishOutput, pattern))
-        {
-            var path = match.Groups["path"].Value;
-            if (!path.StartsWith(libraryDirectory, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            // MSBuild repeats a warning once per referencing project; count each site once.
-            if (!sites.Add($"{path}:{match.Groups["line"].Value}:{match.Groups["code"].Value}"))
-            {
-                continue;
-            }
-
-            var file = Path.GetFileName(path);
-            counts[file] = counts.GetValueOrDefault(file) + 1;
-        }
-
-        return counts;
     }
 
     private static string Describe(Dictionary<string, int> warnings)

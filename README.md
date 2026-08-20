@@ -118,6 +118,9 @@ without that its tests report inconclusive and nothing is published:
 ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTests
 ```
 
+CI runs the first two suites on every push and pull request. The trimmed suite runs nightly and
+on demand (Actions → trimmed-publish → Run workflow), since each run publishes from scratch.
+
 ## Known gaps
 
 - **`OrbMapView` (geo layout) is not supported.** This library wraps Orb's canvas graph view

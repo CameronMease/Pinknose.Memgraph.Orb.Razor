@@ -1,0 +1,44 @@
+name: trimmed-publish
+
+# Not on push: this suite wipes the Release artifacts and publishes from scratch so ILLink
+# actually runs, which costs minutes every time. Nightly catches drift, and the manual
+# trigger is there for when a change touches serialization, interop, or the trimmer's view
+# of either.
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  trimmed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      # Without this the suite skips itself in about a second.
+      ORB_TRIM_TESTS: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Required here: publishing the WebAssembly client with trimming relinks the runtime
+      # through emscripten, which this workload provides.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      - name: Install Chromium
+        run: pwsh tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      # Publishes the sample host trimmed, checks ILLink reported nothing against the library,
+      # and drives the published app: render, styles and labels, a node click coming back to
+      # .NET through [JSInvokable], an update after a parameter change, and the label-only
+      # default fallback.
+      - name: Trimmed publish tests
+        run: dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTests --configuration Release --no-build

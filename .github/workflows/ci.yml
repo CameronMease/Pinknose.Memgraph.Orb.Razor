@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# One run per ref. A second push supersedes the run already in flight instead of paying for
+# both, which matters on a private repo where minutes come out of a monthly allowance.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Linux bills at 1x where Windows is 2x and macOS 10x, and nothing here needs Windows.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # The sample host references a Blazor WebAssembly project. A plain build may not need
+      # this workload, but the failure mode if it does is an unhelpful mid-build error, and
+      # installing it costs about a minute. Drop it if CI proves it unnecessary.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      # Ships in the Microsoft.Playwright package's build output; installs the browser binary
+      # and the system libraries Chromium needs on a bare runner.
+      - name: Install Chromium
+        run: pwsh tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Unit tests
+        run: dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --configuration Release --no-build
+
+      # Starts the sample host itself and drives both the Server and WebAssembly routes.
+      - name: Browser tests
+        run: dotnet test tests/Pinknose.Memgraph.Orb.Razor.BrowserTests --configuration Release --no-build
