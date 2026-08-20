@@ -1207,7 +1207,7 @@ internal static class OrbJson
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbSerializationTests"`
-Expected: PASS, 9 tests.
+Expected: PASS, 11 tests.
 
 - [ ] **Step 7: Commit**
 
@@ -1332,6 +1332,58 @@ public class OrbProjectorTests
         CollectionAssert.AreEqual(new[] { "e1" }, result.DanglingEdgeIds.ToArray());
         Assert.AreEqual(1, result.Payload.Edges.Count,
             "dangling edges are still sent so the graph self-heals when the node arrives");
+    }
+
+    // The two MergeLabel overloads copy 39 properties by hand. Spot-checking a few would
+    // let a dropped property through, so these walk every property reflectively.
+    private static object SampleValue(Type t)
+    {
+        var u = Nullable.GetUnderlyingType(t) ?? t;
+        if (u == typeof(string)) return "x";
+        if (u == typeof(double)) return 1.5d;
+        if (u == typeof(bool)) return true;
+        if (u == typeof(OrbEdgeLineStyle)) return OrbEdgeLineStyle.Dashed;
+        if (u.IsEnum) return Enum.GetValues(u).GetValue(0)!;
+        throw new NotSupportedException($"No sample value for {u}.");
+    }
+
+    [TestMethod]
+    public void Project_CopiesEveryNodeStylePropertyToThePayload()
+    {
+        var style = new OrbNodeStyle();
+        foreach (var p in typeof(OrbNodeStyle).GetProperties())
+        {
+            p.SetValue(style, SampleValue(p.PropertyType));
+        }
+
+        var payload = Project([new OrbNode("n1") { Style = style }], []).Payload.Nodes[0].Style!;
+
+        foreach (var p in typeof(OrbNodeStyle).GetProperties())
+        {
+            var target = typeof(OrbNodeStylePayload).GetProperty(p.Name);
+            Assert.IsNotNull(target, $"OrbNodeStylePayload is missing '{p.Name}'");
+            Assert.IsNotNull(target.GetValue(payload), $"projector dropped '{p.Name}'");
+        }
+    }
+
+    [TestMethod]
+    public void Project_CopiesEveryEdgeStylePropertyToThePayload()
+    {
+        var style = new OrbEdgeStyle();
+        foreach (var p in typeof(OrbEdgeStyle).GetProperties())
+        {
+            p.SetValue(style, SampleValue(p.PropertyType));
+        }
+
+        var edge = new OrbEdge("e1", "n1", "n2") { Style = style };
+        var payload = Project([new OrbNode("n1"), new OrbNode("n2")], [edge]).Payload.Edges[0].Style!;
+
+        foreach (var p in typeof(OrbEdgeStyle).GetProperties())
+        {
+            var target = typeof(OrbEdgeStylePayload).GetProperty(p.Name);
+            Assert.IsNotNull(target, $"OrbEdgeStylePayload is missing '{p.Name}'");
+            Assert.IsNotNull(target.GetValue(payload), $"projector dropped '{p.Name}'");
+        }
     }
 
     [TestMethod]
@@ -1494,7 +1546,7 @@ internal static class OrbProjector
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbProjectorTests"`
-Expected: PASS, 9 tests.
+Expected: PASS, 11 tests.
 
 - [ ] **Step 5: Run the whole suite for regressions**
 
