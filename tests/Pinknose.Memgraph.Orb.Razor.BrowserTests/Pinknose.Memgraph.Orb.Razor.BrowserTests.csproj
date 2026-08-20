@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Not Microsoft.Playwright.MSTest: its 1.62.0 build still hard-references the old
+         "Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0" assembly name
+         that MSTest.TestFramework used before its 4.0 rename to "MSTest.TestFramework.dll".
+         NuGet's single-version resolution collapses the shared MSTest.TestFramework package
+         reference to whichever version wins, here MSTest 4.3.3, so the old-named DLL
+         Playwright.MSTest needs is never deployed, PageTest fails to load at test-discovery
+         time, and every test silently disappears (0 discovered, no build error). The plain
+         Microsoft.Playwright driver has no MSTest dependency at all, so OrbGraphSmokeTests
+         below drives the browser lifecycle itself instead of inheriting PageTest. -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
+    <PackageReference Include="MSTest" Version="4.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+</Project>

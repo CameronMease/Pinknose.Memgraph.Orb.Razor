@@ -174,6 +174,9 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
     subscribe(handle, subscribedEvents);
     view.render(() => view.recenter());
 
+    // Test seam: the browser suite needs to inspect graph state and node positions.
+    globalThis.__orbTestView = view;
+
     return handle;
 }
 

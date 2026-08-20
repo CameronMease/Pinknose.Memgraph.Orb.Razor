@@ -3,6 +3,7 @@
     <Project Path="samples/Pinknose.Memgraph.Orb.Razor.SampleHost/Pinknose.Memgraph.Orb.Razor.SampleHost.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/Pinknose.Memgraph.Orb.Razor.BrowserTests.csproj" />
     <Project Path="tests/Pinknose.Memgraph.Orb.Razor.Tests/Pinknose.Memgraph.Orb.Razor.Tests.csproj" />
   </Folder>
   <Project Path="Pinknose.Memgraph.Orb.Razor/Pinknose.Memgraph.Orb.Razor.csproj" />
