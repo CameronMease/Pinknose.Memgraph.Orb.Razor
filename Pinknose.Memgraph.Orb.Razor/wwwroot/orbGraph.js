@@ -1,79 +1,40 @@
-const scriptLoads = new Map();
-const styleLoads = new Map();
+const SCRIPT_URL = "./_content/Pinknose.Memgraph.Orb.Razor/vendor/memgraph/orb/1.0.2/orb.min.js";
+const SCRIPT_INTEGRITY = "sha384-/bdC+Sgoda/KpkiTPljaZXPEpNJg712oGud22zh7zsoVZch3PRsvcjfqNLRCaIoT";
 
-function ensureScript(url, integrity) {
-    if (!url) {
-        throw new Error("An Orb script URL is required.");
+let scriptLoad = null;
+
+function ensureScript() {
+    if (scriptLoad) {
+        return scriptLoad;
     }
 
-    if (!scriptLoads.has(url)) {
-        scriptLoads.set(url, new Promise((resolve, reject) => {
-            const existing = document.querySelector(`script[src="${url}"]`);
-            if (existing) {
-                resolve();
-                return;
-            }
+    scriptLoad = new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${SCRIPT_URL}"]`);
+        if (existing) {
+            resolve();
+            return;
+        }
 
-            const script = document.createElement("script");
-            script.src = url;
-            script.async = true;
+        const script = document.createElement("script");
+        script.src = SCRIPT_URL;
+        script.async = true;
+        // The browser verifies this itself and refuses to execute a mismatched bundle.
+        script.integrity = SCRIPT_INTEGRITY;
+        script.crossOrigin = "anonymous";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load Orb from '${SCRIPT_URL}'.`));
+        document.head.appendChild(script);
+    });
 
-            // The browser verifies this hash itself and refuses to execute a
-            // mismatched bundle, so no separate fetch-and-hash pass is needed.
-            if (integrity) {
-                script.integrity = integrity;
-                script.crossOrigin = "anonymous";
-            }
-
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error(`Failed to load script '${url}'.`));
-            document.head.appendChild(script);
-        }));
-    }
-
-    return scriptLoads.get(url);
+    return scriptLoad;
 }
 
-function ensureStyle(url) {
-    if (!url) {
-        return;
-    }
-
-    if (!styleLoads.has(url)) {
-        styleLoads.set(url, new Promise((resolve) => {
-            const existing = document.querySelector(`link[href="${url}"]`);
-            if (existing) {
-                resolve();
-                return;
-            }
-
-            const link = document.createElement("link");
-            link.rel = "stylesheet";
-            link.href = url;
-            link.onload = () => resolve();
-            link.onerror = () => resolve();
-            document.head.appendChild(link);
-        }));
-    }
-
-    return styleLoads.get(url);
-}
-
-function parseJson(value) {
-    if (!value || !value.trim()) {
-        return null;
-    }
-
-    return JSON.parse(value);
-}
-
-// The script tag resolving is not the same as the UMD bundle having run: a tag
-// added by an earlier component may still be in flight when we adopt it above.
+// A resolved script tag is not the same as the UMD bundle having run: a tag added by an
+// earlier component may still be in flight when we adopt it above.
 async function resolveOrbView(maxRetries = 50, delayMs = 20) {
     for (let i = 0; i < maxRetries; i++) {
-        const candidate = globalThis.Orb?.OrbView;
-        if (typeof candidate === "function") {
-            return candidate;
+        if (typeof globalThis.Orb?.OrbView === "function") {
+            return globalThis.Orb.OrbView;
         }
 
         if (i < maxRetries - 1) {
@@ -81,43 +42,186 @@ async function resolveOrbView(maxRetries = 50, delayMs = 20) {
         }
     }
 
-    throw new Error("The 'OrbView' export was not found on the global Orb namespace after script load.");
+    throw new Error("The 'OrbView' export was not found on the global Orb namespace.");
 }
 
-export async function initializeOrb(hostElement, scriptUrl, scriptIntegrity, styleUrl, dataJson, settingsJson) {
-    if (!hostElement) {
+function parseJson(value) {
+    return value && value.trim() ? JSON.parse(value) : null;
+}
+
+// Orb's _applyStyle() skips any node that already has a style, so setDefaultStyle would
+// apply exactly once per node and never repaint a changed style. Push them explicitly.
+function pushStyles(view, payload) {
+    const graph = view.data;
+
+    for (const node of payload.nodes) {
+        if (node.style) {
+            graph.getNodeById(node.id)?.setStyle(node.style, { isNotifySkipped: true });
+        }
+    }
+
+    for (const edge of payload.edges) {
+        if (edge.style) {
+            graph.getEdgeById(edge.id)?.setStyle(edge.style, { isNotifySkipped: true });
+        }
+    }
+}
+
+function pointsOf(event) {
+    return {
+        localX: event.localPoint?.x ?? 0,
+        localY: event.localPoint?.y ?? 0,
+        globalX: event.globalPoint?.x ?? 0,
+        globalY: event.globalPoint?.y ?? 0
+    };
+}
+
+function subscribe(handle, subscribedEvents) {
+    const wanted = new Set(subscribedEvents ?? []);
+    const { view, dotNetRef } = handle;
+
+    const send = (type, id, event) =>
+        dotNetRef.invokeMethodAsync("HandleOrbEvent", type, { id, ...pointsOf(event) });
+
+    const classify = (subject) => {
+        if (!subject) return null;
+        if (globalThis.Orb.isNode(subject)) return "node";
+        if (globalThis.Orb.isEdge(subject)) return "edge";
+        return null;
+    };
+
+    const forwardSubject = (orbEvent, nodeType, edgeType) => {
+        view.events.on(orbEvent, (e) => {
+            const kind = classify(e.subject ?? e.node ?? e.edge);
+            const subject = e.subject ?? e.node ?? e.edge;
+            if (kind === "node" && wanted.has(nodeType)) send(nodeType, String(subject.id), e);
+            else if (kind === "edge" && wanted.has(edgeType)) send(edgeType, String(subject.id), e);
+            else if (!kind && wanted.has("background-click") && orbEvent === "mouse-click") {
+                send("background-click", null, e);
+            }
+        });
+    };
+
+    forwardSubject("mouse-click", "node-click", "edge-click");
+    forwardSubject("mouse-double-click", "node-double-click", "edge-double-click");
+    forwardSubject("mouse-right-click", "node-right-click", "edge-right-click");
+
+    const hoverWanted = ["node-hover-enter", "node-hover-leave",
+                         "edge-hover-enter", "edge-hover-leave"].some((t) => wanted.has(t));
+
+    if (hoverWanted) {
+        // Orb's DefaultEventStrategy.onMouseMove only ever calls getNearestNode — it never
+        // hit-tests edges. So mouse-move's `subject` is node-or-nothing, and the native
+        // edge-hover event is gated on that same strategy and never fires either. Verified
+        // empirically and in orb's strategy.js (Task 1 spike). We therefore hit-test
+        // ourselves off the public view.data facade.
+        let hoveredId = null;
+        let hoveredKind = null;
+
+        view.events.on("mouse-move", (e) => {
+            const point = e.localPoint;
+            let subject = point ? view.data.getNearestNode(point) : null;
+            let kind = subject ? "node" : null;
+
+            if (!subject && point) {
+                // getNearestEdge(point, minDistance = 3) — the default threshold means
+                // empty space resolves to nothing rather than the nearest edge on screen.
+                // Do not pass a threshold; Orb's default is what its own click path uses.
+                subject = view.data.getNearestEdge(point);
+                kind = subject ? "edge" : null;
+            }
+
+            const id = subject ? String(subject.id) : null;
+
+            if (id === hoveredId) {
+                return;
+            }
+
+            if (hoveredId) {
+                const leave = `${hoveredKind}-hover-leave`;
+                if (wanted.has(leave)) send(leave, hoveredId, e);
+            }
+
+            if (id) {
+                const enter = `${kind}-hover-enter`;
+                if (wanted.has(enter)) send(enter, id, e);
+            }
+
+            hoveredId = id;
+            hoveredKind = kind;
+        });
+    }
+}
+
+export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, subscribedEvents) {
+    if (!host) {
         throw new Error("Host element is required.");
     }
 
-    await Promise.all([ensureScript(scriptUrl, scriptIntegrity), ensureStyle(styleUrl)]);
-
+    await ensureScript();
     const OrbView = await resolveOrbView();
-    const settings = parseJson(settingsJson) ?? undefined;
-    const view = new OrbView(hostElement, settings);
 
-    const data = parseJson(dataJson);
-    if (data) {
-        view.data.setup(data);
+    const settings = parseJson(settingsJson) ?? undefined;
+    const view = new OrbView(host, settings);
+    const handle = { view, host, dotNetRef };
+
+    const payload = parseJson(dataJson);
+    if (payload) {
+        view.data.setup(payload);
+        pushStyles(view, payload);
     }
 
+    subscribe(handle, subscribedEvents);
     view.render(() => view.recenter());
 
-    return { view, hostElement };
+    return handle;
 }
 
+export function updateData(handle, dataJson, removedNodeIds, removedEdgeIds) {
+    if (!handle) return;
+
+    const payload = parseJson(dataJson);
+    if (payload) {
+        handle.view.data.merge(payload);
+    }
+
+    if (removedNodeIds?.length || removedEdgeIds?.length) {
+        handle.view.data.remove({
+            nodeIds: removedNodeIds ?? [],
+            edgeIds: removedEdgeIds ?? []
+        });
+    }
+
+    if (payload) {
+        pushStyles(handle.view, payload);
+    }
+
+    handle.view.render();
+}
+
+export function applySettings(handle, settingsJson) {
+    const settings = parseJson(settingsJson);
+    if (handle && settings) {
+        handle.view.setSettings(settings);
+    }
+}
+
+export function recenter(handle)      { handle?.view.recenter(); }
+export function zoomIn(handle)        { handle?.view.zoomIn(); }
+export function zoomOut(handle)       { handle?.view.zoomOut(); }
+export function fixNodes(handle)      { handle?.view.fixNodes(); }
+export function releaseNodes(handle)  { handle?.view.releaseNodes(); }
+export function unselectAll(handle)   { handle?.view.interaction.unselectAll(); handle?.view.render(); }
+export function selectNode(handle, id) { handle?.view.interaction.selectNodeById(id); handle?.view.render(); }
+export function selectEdge(handle, id) { handle?.view.interaction.selectEdgeById(id); handle?.view.render(); }
+export function getSvg(handle)        { return handle ? handle.view.getSVG() : ""; }
+
 export function disposeOrb(handle) {
-    if (!handle) {
-        return;
-    }
+    if (!handle) return;
 
-    const view = handle.view;
-    const hostElement = handle.hostElement;
+    handle.view?.destroy();
 
-    if (view && typeof view.destroy === "function") {
-        view.destroy();
-    }
-
-    if (hostElement) {
-        hostElement.innerHTML = "";
+    if (handle.host) {
+        handle.host.innerHTML = "";
     }
 }
