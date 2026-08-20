@@ -4,6 +4,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Ships the XML docs beside the DLL so consumers get IntelliSense on every public member.
+         Also switches on CS1591, which is deliberate: an undocumented public member becomes a
+         build warning rather than a silent gap in the package. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- RS0041 flags public API that uses un-annotated (nullable-oblivious) reference types.
+         The only offender is BuildRenderTree, which the Razor compiler generates and which
+         cannot be annotated from here. RS0016, the rule that actually guards the surface,
+         stays on. -->
+    <NoWarn>$(NoWarn);RS0041</NoWarn>
+
+    <!-- Errors, not warnings: the point of the guard is that an unrecorded change to the
+         public surface stops the build. RS0016 is an addition that was never declared,
+         RS0017 an entry whose member no longer exists. -->
+    <WarningsAsErrors>$(WarningsAsErrors);RS0016;RS0017</WarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Label="Package">
@@ -64,6 +80,15 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.11" />
     <!-- Build-time only: it sets the version and ships nothing into the package. -->
     <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="All" />
+    <!-- Tracks the public API surface in PublicAPI.*.txt. Adding or changing a public member
+         without recording it there fails the build, so a breaking change cannot reach a tag by
+         accident. That matters because a published NuGet version can never be replaced. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
   </ItemGroup>
 
   <ItemGroup>

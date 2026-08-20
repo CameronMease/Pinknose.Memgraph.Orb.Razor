@@ -12,6 +12,18 @@
         "http"
       ],
       "port": 5053
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "docfx",
+        "serve",
+        "docfx/_site",
+        "--port",
+        "8088"
+      ],
+      "port": 8088
     }
   ]
 }

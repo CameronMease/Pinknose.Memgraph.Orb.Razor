@@ -1,0 +1,61 @@
+name: docs
+
+# Publishes the DocFX site to GitHub Pages. Requires the repository to be public (or a plan
+# that includes Pages for private repositories) and Settings -> Pages -> Source set to
+# "GitHub Actions"; without that, the deploy step fails and the build step still tells you
+# whether the site is healthy.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never two deploys at once, and let a newer commit supersede an in-flight one -- but do not
+# cancel a deploy midway, which can leave the published site half-updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # DocFX reads the compiled assembly and its XML docs, not the source, so the library has
+      # to be built first -- and in Release, which is where docfx.json looks.
+      - name: Build library
+        run: dotnet build Pinknose.Memgraph.Orb.Razor --configuration Release
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Build site
+        run: dotnet docfx docfx/docfx.json --warningsAsErrors
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docfx/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

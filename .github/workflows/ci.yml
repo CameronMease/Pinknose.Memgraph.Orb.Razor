@@ -1,7 +1,11 @@
 name: ci
 
+# master only on push, because changes reach it through a pull request now: without the
+# branch filter a PR from a branch in this repo runs CI twice, once for the branch push and
+# once for the PR itself.
 on:
   push:
+    branches: [master]
   pull_request:
   workflow_dispatch:
 
@@ -37,6 +41,15 @@ jobs:
       # and the system libraries Chromium needs on a bare runner.
       - name: Install Chromium
         run: pwsh tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      # Reads the compiled assembly and its XML docs, so it has to follow the build. Warnings
+      # are errors here: a broken cross-reference or a type that stopped being documented is
+      # exactly what this step is for, and DocFX reports both as warnings.
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Build API documentation
+        run: dotnet docfx docfx/docfx.json --warningsAsErrors
 
       - name: Unit tests
         run: dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --configuration Release --no-build

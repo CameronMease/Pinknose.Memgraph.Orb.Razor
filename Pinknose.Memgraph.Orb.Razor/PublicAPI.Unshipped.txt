@@ -1,0 +1,410 @@
+#nullable enable
+Pinknose.Memgraph.Orb.Razor.IOrbEdge
+Pinknose.Memgraph.Orb.Razor.IOrbEdge.End.get -> string!
+Pinknose.Memgraph.Orb.Razor.IOrbEdge.Id.get -> string!
+Pinknose.Memgraph.Orb.Razor.IOrbEdge.Label.get -> string?
+Pinknose.Memgraph.Orb.Razor.IOrbEdge.Start.get -> string!
+Pinknose.Memgraph.Orb.Razor.IOrbEdge.Style.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle?
+Pinknose.Memgraph.Orb.Razor.IOrbNode
+Pinknose.Memgraph.Orb.Razor.IOrbNode.Id.get -> string!
+Pinknose.Memgraph.Orb.Razor.IOrbNode.Label.get -> string?
+Pinknose.Memgraph.Orb.Razor.IOrbNode.Style.get -> Pinknose.Memgraph.Orb.Razor.OrbNodeStyle?
+Pinknose.Memgraph.Orb.Razor.OrbAnchor
+Pinknose.Memgraph.Orb.Razor.OrbAnchor.Center = 1 -> Pinknose.Memgraph.Orb.Razor.OrbAnchor
+Pinknose.Memgraph.Orb.Razor.OrbAnchor.End = 2 -> Pinknose.Memgraph.Orb.Razor.OrbAnchor
+Pinknose.Memgraph.Orb.Razor.OrbAnchor.Start = 0 -> Pinknose.Memgraph.Orb.Razor.OrbAnchor
+Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs
+Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs.GlobalPoint.get -> Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs.GlobalPoint.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs.LocalPoint.get -> Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs.LocalPoint.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs.OrbBackgroundEventArgs() -> void
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.CenterX.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.CenterX.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.CenterY.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.CenterY.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.OrbCircularLayout() -> void
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.Radius.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.Radius.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdge
+Pinknose.Memgraph.Orb.Razor.OrbEdge.End.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbEdge.Id.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbEdge.Label.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdge.Label.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdge.OrbEdge(string! id, string! start, string! end) -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdge.Start.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbEdge.Style.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle?
+Pinknose.Memgraph.Orb.Razor.OrbEdge.Style.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.Edge.get -> TEdge
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.Edge.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.GlobalPoint.get -> Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.GlobalPoint.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.LocalPoint.get -> Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.LocalPoint.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.OrbEdgeEventArgs() -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle
+Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Kind.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Pattern.get -> double[]?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ArrowSize.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ArrowSize.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.Color.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.Color.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ColorHover.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ColorHover.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ColorSelected.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ColorSelected.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontBackgroundColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontBackgroundColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontFamily.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontFamily.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontSize.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.FontSize.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.LineStyle.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.LineStyle.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.OrbEdgeStyle() -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowOffsetX.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowOffsetX.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowOffsetY.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowOffsetY.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowSize.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ShadowSize.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.Width.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.Width.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.WidthHover.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.WidthHover.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.WidthSelected.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.WidthSelected.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ZIndex.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ZIndex.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.Alpha.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.Alpha.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.AlphaDecay.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.AlphaDecay.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.AlphaMin.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.AlphaMin.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.AlphaTarget.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.AlphaTarget.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceAlpha.OrbForceAlpha() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.OrbForceCentering() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.Strength.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.Strength.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.X.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.X.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.Y.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceCentering.Y.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.Iterations.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.Iterations.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.OrbForceCollision() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.Radius.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.Radius.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.Strength.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceCollision.Strength.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Alpha.get -> Pinknose.Memgraph.Orb.Razor.OrbForceAlpha?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Alpha.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Centering.get -> Pinknose.Memgraph.Orb.Razor.OrbForceCentering?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Centering.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Collision.get -> Pinknose.Memgraph.Orb.Razor.OrbForceCollision?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Collision.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsPhysicsEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsPhysicsEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsSimulatingOnDataUpdate.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsSimulatingOnDataUpdate.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsSimulatingOnSettingsUpdate.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsSimulatingOnSettingsUpdate.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsSimulatingOnUnstick.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.IsSimulatingOnUnstick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Links.get -> Pinknose.Memgraph.Orb.Razor.OrbForceLinks?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Links.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.ManyBody.get -> Pinknose.Memgraph.Orb.Razor.OrbForceManyBody?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.ManyBody.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.OrbForceLayout() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Positioning.get -> Pinknose.Memgraph.Orb.Razor.OrbForcePositioning?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.Positioning.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.UseGpu.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbForceLayout.UseGpu.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.Distance.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.Distance.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.Iterations.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.Iterations.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.OrbForceLinks() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.Strength.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceLinks.Strength.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.DistanceMax.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.DistanceMax.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.DistanceMin.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.DistanceMin.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.EdgeMidpointRepulsion.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.EdgeMidpointRepulsion.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.OrbForceManyBody() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.Strength.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.Strength.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.Theta.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceManyBody.Theta.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForcePositioning
+Pinknose.Memgraph.Orb.Razor.OrbForcePositioning.ForceX.get -> Pinknose.Memgraph.Orb.Razor.OrbForceXPosition?
+Pinknose.Memgraph.Orb.Razor.OrbForcePositioning.ForceX.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForcePositioning.ForceY.get -> Pinknose.Memgraph.Orb.Razor.OrbForceYPosition?
+Pinknose.Memgraph.Orb.Razor.OrbForcePositioning.ForceY.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForcePositioning.OrbForcePositioning() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceXPosition
+Pinknose.Memgraph.Orb.Razor.OrbForceXPosition.OrbForceXPosition() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceXPosition.Strength.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceXPosition.Strength.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceXPosition.X.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceXPosition.X.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceYPosition
+Pinknose.Memgraph.Orb.Razor.OrbForceYPosition.OrbForceYPosition() -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceYPosition.Strength.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceYPosition.Strength.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbForceYPosition.Y.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbForceYPosition.Y.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.AdditionalAttributes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>?
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.AdditionalAttributes.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Edges.get -> System.Collections.Generic.IEnumerable<TEdge>!
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Edges.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.FixNodesAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.GetSvgAsync() -> System.Threading.Tasks.ValueTask<string!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Height.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Height.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Nodes.get -> System.Collections.Generic.IEnumerable<TNode>!
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Nodes.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnBackgroundClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbBackgroundEventArgs!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnBackgroundClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeDoubleClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeDoubleClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeHoverEnter.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeHoverEnter.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeHoverLeave.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeHoverLeave.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeRightClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnEdgeRightClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeDoubleClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeDoubleClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeHoverEnter.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeHoverEnter.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeHoverLeave.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeHoverLeave.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeRightClick.get -> Microsoft.AspNetCore.Components.EventCallback<Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>!>
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnNodeRightClick.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OrbGraph() -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.RecenterAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.ReleaseNodesAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.SelectEdgeAsync(string! id) -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.SelectNodeAsync(string! id) -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Settings.get -> Pinknose.Memgraph.Orb.Razor.OrbSettings?
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Settings.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.UnselectAllAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Width.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Width.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.ZoomInAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.ZoomOutAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGridLayout
+Pinknose.Memgraph.Orb.Razor.OrbGridLayout.ColGap.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbGridLayout.ColGap.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGridLayout.OrbGridLayout() -> void
+Pinknose.Memgraph.Orb.Razor.OrbGridLayout.RowGap.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbGridLayout.RowGap.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.LevelGap.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.LevelGap.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.NodeGap.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.NodeGap.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.OrbHierarchicalLayout() -> void
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.Orientation.get -> Pinknose.Memgraph.Orb.Razor.OrbLayoutOrientation?
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.Orientation.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.Reversed.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.Reversed.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.TreeGap.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.TreeGap.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings
+Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings.IsDragEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings.IsDragEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings.IsZoomEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings.IsZoomEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings.OrbInteractionSettings() -> void
+Pinknose.Memgraph.Orb.Razor.OrbLayout
+Pinknose.Memgraph.Orb.Razor.OrbLayout.AnchorX.get -> Pinknose.Memgraph.Orb.Razor.OrbAnchor?
+Pinknose.Memgraph.Orb.Razor.OrbLayout.AnchorX.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbLayout.AnchorY.get -> Pinknose.Memgraph.Orb.Razor.OrbAnchor?
+Pinknose.Memgraph.Orb.Razor.OrbLayout.AnchorY.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbLayout.OrbLayout() -> void
+Pinknose.Memgraph.Orb.Razor.OrbLayoutOrientation
+Pinknose.Memgraph.Orb.Razor.OrbLayoutOrientation.Horizontal = 0 -> Pinknose.Memgraph.Orb.Razor.OrbLayoutOrientation
+Pinknose.Memgraph.Orb.Razor.OrbLayoutOrientation.Vertical = 1 -> Pinknose.Memgraph.Orb.Razor.OrbLayoutOrientation
+Pinknose.Memgraph.Orb.Razor.OrbNode
+Pinknose.Memgraph.Orb.Razor.OrbNode.Id.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbNode.Label.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNode.Label.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNode.OrbNode(string! id) -> void
+Pinknose.Memgraph.Orb.Razor.OrbNode.Style.get -> Pinknose.Memgraph.Orb.Razor.OrbNodeStyle?
+Pinknose.Memgraph.Orb.Razor.OrbNode.Style.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.GlobalPoint.get -> Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.GlobalPoint.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.LocalPoint.get -> Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.LocalPoint.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.Node.get -> TNode
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.Node.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.OrbNodeEventArgs() -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Circle = 0 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Diamond = 3 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Dot = 1 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Hexagon = 7 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Square = 2 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Star = 6 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Triangle = 4 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeShape.TriangleDown = 5 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderColorHover.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderColorHover.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderColorSelected.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderColorSelected.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderWidth.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderWidth.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderWidthSelected.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.BorderWidthSelected.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Color.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Color.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ColorHover.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ColorHover.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ColorSelected.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ColorSelected.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontBackgroundColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontBackgroundColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontFamily.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontFamily.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontSize.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.FontSize.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ImageUrl.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ImageUrl.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ImageUrlSelected.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ImageUrlSelected.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Mass.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Mass.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.OrbNodeStyle() -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowOffsetX.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowOffsetX.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowOffsetY.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowOffsetY.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowSize.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ShadowSize.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Shape.get -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Shape.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Size.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.Size.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ZIndex.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbNodeStyle.ZIndex.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbPoint
+Pinknose.Memgraph.Orb.Razor.OrbPoint.Deconstruct(out double X, out double Y) -> void
+Pinknose.Memgraph.Orb.Razor.OrbPoint.Equals(Pinknose.Memgraph.Orb.Razor.OrbPoint other) -> bool
+Pinknose.Memgraph.Orb.Razor.OrbPoint.OrbPoint() -> void
+Pinknose.Memgraph.Orb.Razor.OrbPoint.OrbPoint(double X, double Y) -> void
+Pinknose.Memgraph.Orb.Razor.OrbPoint.X.get -> double
+Pinknose.Memgraph.Orb.Razor.OrbPoint.X.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbPoint.Y.get -> double
+Pinknose.Memgraph.Orb.Razor.OrbPoint.Y.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.AreCollapsedContainerDimensionsAllowed.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.AreCollapsedContainerDimensionsAllowed.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.BackgroundColor.get -> string?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.BackgroundColor.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ContextAlphaOnEvent.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ContextAlphaOnEvent.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ContextAlphaOnEventIsEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ContextAlphaOnEventIsEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.DevicePixelRatio.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.DevicePixelRatio.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.FitZoomMargin.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.FitZoomMargin.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.Fps.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.Fps.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.LabelsIsEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.LabelsIsEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.LabelsOnEventIsEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.LabelsOnEventIsEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.MaxZoom.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.MaxZoom.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.MinZoom.get -> double?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.MinZoom.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.OrbRenderSettings() -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ShadowIsEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ShadowIsEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ShadowOnEventIsEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.ShadowOnEventIsEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.Type.get -> Pinknose.Memgraph.Orb.Razor.OrbRendererType?
+Pinknose.Memgraph.Orb.Razor.OrbRenderSettings.Type.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbRendererType
+Pinknose.Memgraph.Orb.Razor.OrbRendererType.Canvas = 0 -> Pinknose.Memgraph.Orb.Razor.OrbRendererType
+Pinknose.Memgraph.Orb.Razor.OrbRendererType.WebGl = 1 -> Pinknose.Memgraph.Orb.Razor.OrbRendererType
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultHoverEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultHoverEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultMultiSelectEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultMultiSelectEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultSelectCascadeEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultSelectCascadeEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultSelectEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.IsDefaultSelectEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings.OrbSelectionSettings() -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings
+Pinknose.Memgraph.Orb.Razor.OrbSettings.AreCoordinatesRounded.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.AreCoordinatesRounded.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Interaction.get -> Pinknose.Memgraph.Orb.Razor.OrbInteractionSettings?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Interaction.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.IsOutOfBoundsDragEnabled.get -> bool?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.IsOutOfBoundsDragEnabled.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Layout.get -> Pinknose.Memgraph.Orb.Razor.OrbLayout?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Layout.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.OrbSettings() -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Render.get -> Pinknose.Memgraph.Orb.Razor.OrbRenderSettings?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Render.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Selection.get -> Pinknose.Memgraph.Orb.Razor.OrbSelectionSettings?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.Selection.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbSettings.ZoomFitTransitionMs.get -> int?
+Pinknose.Memgraph.Orb.Razor.OrbSettings.ZoomFitTransitionMs.set -> void
+Pinknose.Memgraph.Orb.Razor._Imports
+Pinknose.Memgraph.Orb.Razor._Imports.Execute() -> void
+Pinknose.Memgraph.Orb.Razor._Imports._Imports() -> void
+abstract Pinknose.Memgraph.Orb.Razor.OrbLayout.LayoutType.get -> string!
+override Pinknose.Memgraph.Orb.Razor.OrbCircularLayout.LayoutType.get -> string!
+override Pinknose.Memgraph.Orb.Razor.OrbForceLayout.LayoutType.get -> string!
+override Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnParametersSet() -> void
+override Pinknose.Memgraph.Orb.Razor.OrbGridLayout.LayoutType.get -> string!
+override Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.LayoutType.get -> string!
+override Pinknose.Memgraph.Orb.Razor.OrbPoint.GetHashCode() -> int
+static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Custom(params double[]! pattern) -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
+static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Dashed.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
+static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Dotted.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
+static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Solid.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
+static Pinknose.Memgraph.Orb.Razor.OrbPoint.operator !=(Pinknose.Memgraph.Orb.Razor.OrbPoint left, Pinknose.Memgraph.Orb.Razor.OrbPoint right) -> bool
+static Pinknose.Memgraph.Orb.Razor.OrbPoint.operator ==(Pinknose.Memgraph.Orb.Razor.OrbPoint left, Pinknose.Memgraph.Orb.Razor.OrbPoint right) -> bool
+~override Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override Pinknose.Memgraph.Orb.Razor.OrbPoint.Equals(object obj) -> bool
+~override Pinknose.Memgraph.Orb.Razor.OrbPoint.ToString() -> string
