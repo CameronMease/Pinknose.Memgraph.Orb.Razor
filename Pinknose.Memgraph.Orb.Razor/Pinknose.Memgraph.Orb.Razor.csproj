@@ -4,6 +4,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Ships the XML docs beside the DLL so consumers get IntelliSense on every public member.
+         Also switches on CS1591, which is deliberate: an undocumented public member becomes a
+         build warning rather than a silent gap in the package. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Label="Package">

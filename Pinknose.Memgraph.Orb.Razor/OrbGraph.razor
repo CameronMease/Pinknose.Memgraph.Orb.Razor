@@ -36,25 +36,65 @@
     private string _hostStyle = "";
     private Dictionary<string, object>? _passThrough;
 
+    /// <summary>The nodes to display. Required.</summary>
+    /// <remarks>
+    /// Supplying a changed collection updates the graph in place: existing nodes keep their
+    /// simulated positions, and only genuinely new ones are laid out. Ids must be unique.
+    /// </remarks>
     [Parameter, EditorRequired] public IEnumerable<TNode> Nodes { get; set; } = [];
+    /// <summary>The edges to display. Defaults to none.</summary>
+    /// <remarks>
+    /// Edges whose <see cref="IOrbEdge.Start"/> or <see cref="IOrbEdge.End"/> names a node that
+    /// is no longer present are dropped by Orb along with that node, so they do not have to be
+    /// removed from this collection first.
+    /// </remarks>
     [Parameter] public IEnumerable<TEdge> Edges { get; set; } = [];
+    /// <summary>Renderer, interaction, selection and layout options.</summary>
+    /// <remarks>
+    /// Only what you set is applied; the rest stays at Orb's defaults. Setting this back to
+    /// <see langword="null"/> after supplying a value returns the whole view to those defaults.
+    /// </remarks>
     [Parameter] public OrbSettings? Settings { get; set; }
+    /// <summary>CSS width of the host element. Defaults to <c>100%</c>.</summary>
     [Parameter] public string Width { get; set; } = "100%";
+    /// <summary>CSS height of the host element. Defaults to <c>500px</c>.</summary>
+    /// <remarks>
+    /// Needs a concrete height: the graph is drawn on a canvas sized from this element, and a
+    /// container that collapses to zero renders nothing.
+    /// </remarks>
     [Parameter] public string Height { get; set; } = "500px";
 
+    /// <summary>Any other attributes, applied to the host <c>div</c>.</summary>
+    /// <remarks>
+    /// Lets you add a <c>class</c>, <c>id</c>, data attributes or ARIA attributes. A supplied
+    /// <c>class</c> is appended to the component's own <c>orb-graph</c> class rather than
+    /// replacing it.
+    /// </remarks>
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>Raised when a node is clicked.</summary>
+    /// <remarks>Wiring any event callback stops Blazor inferring the type arguments; supply <c>TNode</c> and <c>TEdge</c> explicitly.</remarks>
     [Parameter] public EventCallback<OrbNodeEventArgs<TNode>> OnNodeClick { get; set; }
+    /// <summary>Raised when a node is double-clicked.</summary>
     [Parameter] public EventCallback<OrbNodeEventArgs<TNode>> OnNodeDoubleClick { get; set; }
+    /// <summary>Raised when a node is right-clicked.</summary>
     [Parameter] public EventCallback<OrbNodeEventArgs<TNode>> OnNodeRightClick { get; set; }
+    /// <summary>Raised when the pointer moves onto a node.</summary>
     [Parameter] public EventCallback<OrbNodeEventArgs<TNode>> OnNodeHoverEnter { get; set; }
+    /// <summary>Raised when the pointer moves off a node.</summary>
     [Parameter] public EventCallback<OrbNodeEventArgs<TNode>> OnNodeHoverLeave { get; set; }
+    /// <summary>Raised when an edge is clicked.</summary>
     [Parameter] public EventCallback<OrbEdgeEventArgs<TEdge>> OnEdgeClick { get; set; }
+    /// <summary>Raised when an edge is double-clicked.</summary>
     [Parameter] public EventCallback<OrbEdgeEventArgs<TEdge>> OnEdgeDoubleClick { get; set; }
+    /// <summary>Raised when an edge is right-clicked.</summary>
     [Parameter] public EventCallback<OrbEdgeEventArgs<TEdge>> OnEdgeRightClick { get; set; }
+    /// <summary>Raised when the pointer moves onto an edge.</summary>
     [Parameter] public EventCallback<OrbEdgeEventArgs<TEdge>> OnEdgeHoverEnter { get; set; }
+    /// <summary>Raised when the pointer moves off an edge.</summary>
     [Parameter] public EventCallback<OrbEdgeEventArgs<TEdge>> OnEdgeHoverLeave { get; set; }
+    /// <summary>Raised when empty canvas is clicked, away from any node or edge.</summary>
     [Parameter] public EventCallback<OrbBackgroundEventArgs> OnBackgroundClick { get; set; }
 
     protected override void OnParametersSet()
@@ -354,15 +394,35 @@
         return initialized && !_disposed && _handle is not null;
     }
 
+    /// <summary>Zooms and pans so the whole graph is in view.</summary>
+    /// <remarks>
+    /// Every method here is safe to call before the graph has finished initializing, and
+    /// safe to call after the component has been disposed: both are no-ops rather than errors.
+    /// </remarks>
     public async ValueTask RecenterAsync() => await InvokeViewAsync("recenter");
+    /// <summary>Zooms in one step, as the user's scroll wheel would.</summary>
     public async ValueTask ZoomInAsync() => await InvokeViewAsync("zoomIn");
+    /// <summary>Zooms out one step.</summary>
     public async ValueTask ZoomOutAsync() => await InvokeViewAsync("zoomOut");
+    /// <summary>Pins every node where it currently sits, stopping the layout from moving it.</summary>
     public async ValueTask FixNodesAsync() => await InvokeViewAsync("fixNodes");
+    /// <summary>Unpins every node, letting the layout move them again.</summary>
     public async ValueTask ReleaseNodesAsync() => await InvokeViewAsync("releaseNodes");
+    /// <summary>Clears the current selection.</summary>
     public async ValueTask UnselectAllAsync() => await InvokeViewAsync("unselectAll");
+    /// <summary>Selects a node, as clicking it would.</summary>
+    /// <param name="id">The <see cref="IOrbNode.Id"/> of the node to select.</param>
     public async ValueTask SelectNodeAsync(string id) => await InvokeViewAsync("selectNode", id);
+    /// <summary>Selects an edge, as clicking it would.</summary>
+    /// <param name="id">The <see cref="IOrbEdge.Id"/> of the edge to select.</param>
     public async ValueTask SelectEdgeAsync(string id) => await InvokeViewAsync("selectEdge", id);
 
+    /// <summary>Exports the current view as SVG markup.</summary>
+    /// <returns>
+    /// The SVG document as a string, or an empty string if the graph is not ready or the
+    /// browser connection has gone away.
+    /// </returns>
+    /// <remarks>Useful for downloads and printing, where a canvas is awkward to work with.</remarks>
     public async ValueTask<string> GetSvgAsync()
     {
         if (!await IsReadyAsync())
@@ -422,6 +482,12 @@
         }
     }
 
+    /// <summary>Tears down the graph, its JavaScript module and its event subscriptions.</summary>
+    /// <remarks>
+    /// Blazor calls this when the component is removed; you do not normally call it yourself.
+    /// It is safe during initialization — a dispose that lands mid-startup cancels it cleanly
+    /// rather than leaking the underlying view.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         _disposed = true;

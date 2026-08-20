@@ -69,6 +69,18 @@ public class PackagingTests
     }
 
     [TestMethod]
+    public void Package_ShipsTheXmlDocumentation()
+    {
+        // Without this file in the package, a consumer gets no IntelliSense for any of it --
+        // no parameter descriptions, no summaries, nothing. It is produced by
+        // GenerateDocumentationFile, which is easy to lose in a csproj cleanup.
+        Assert.IsTrue(
+            _entries.Any(entry =>
+                entry.EndsWith("Pinknose.Memgraph.Orb.Razor.xml", StringComparison.OrdinalIgnoreCase)),
+            $"the XML documentation is missing from the package. Entries: {string.Join(", ", _entries)}");
+    }
+
+    [TestMethod]
     public void Package_ShipsTheReadme()
     {
         Assert.IsTrue(
