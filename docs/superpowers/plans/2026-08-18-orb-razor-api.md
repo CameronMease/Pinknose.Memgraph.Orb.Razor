@@ -583,6 +583,25 @@ public class OrbSettingsTests
     }
 
     [TestMethod]
+    public void ForceLayout_ExposesPositioningAndRepulsion()
+    {
+        var layout = new OrbForceLayout
+        {
+            UseGpu = true,
+            Positioning = new OrbForcePositioning
+            {
+                ForceX = new OrbForceXPosition { X = 0, Strength = 0.1 },
+                ForceY = new OrbForceYPosition { Y = 0, Strength = 0.2 }
+            },
+            ManyBody = new OrbForceManyBody { EdgeMidpointRepulsion = true }
+        };
+
+        Assert.AreEqual(0d, layout.Positioning!.ForceX!.X);
+        Assert.AreEqual(0.2d, layout.Positioning.ForceY!.Strength);
+        Assert.IsTrue(layout.ManyBody!.EdgeMidpointRepulsion);
+    }
+
+    [TestMethod]
     public void ForceLayout_ExposesNestedOptionObjects()
     {
         var layout = new OrbForceLayout
@@ -1207,7 +1226,7 @@ internal static class OrbJson
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbSerializationTests"`
-Expected: PASS, 11 tests.
+Expected: PASS, 9 tests.
 
 - [ ] **Step 7: Commit**
 
@@ -1650,7 +1669,7 @@ internal static class OrbGraphDiff
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --filter "FullyQualifiedName~OrbGraphDiffTests"`
-Expected: PASS, 5 tests.
+Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Commit**
 
