@@ -141,7 +141,8 @@ library: the component's parameters, events and methods live in `OrbGraph.razor`
 source-based metadata step does not compile `.razor` files — pointed at the project it produced
 a page for `OrbGraph` with no members at all. So `docfx/docfx.json` points at
 `bin/Release/net10.0`, and the library must be built in Release first. CI builds the site on
-every push with warnings as errors, so a broken cross-reference fails the build.
+every push with warnings as errors, so a broken cross-reference fails the build, and the
+`docs` workflow publishes it to GitHub Pages on every push to `master`.
 
 ## Changing the public API
 
