@@ -104,6 +104,10 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
+Or create the tag through GitHub's **Releases → Draft a new release** page, which creates the
+tag and the release together. Both routes work: the workflow creates a release when there is
+not one, and attaches the packages to yours when there is.
+
 That triggers the `release` workflow, which runs the unit and packaging tests, packs, refuses
 to continue if the packed version does not match the tag, publishes to NuGet.org, uploads the
 packages as run artifacts, and opens a GitHub Release with generated notes.
