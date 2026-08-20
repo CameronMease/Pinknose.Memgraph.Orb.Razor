@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http;
+using System.Text;
 
 namespace Pinknose.Memgraph.Orb.Razor.BrowserTests;
 
@@ -12,7 +13,28 @@ public static class SampleHostFixture
 {
     public const string BaseUrl = "http://localhost:5099";
 
+    private static readonly object Sync = new();
+    private static readonly StringBuilder Buffer = new();
+
     private static Process? _host;
+
+    /// <summary>
+    /// Everything the sample host has written to stdout/stderr so far. A teardown exception
+    /// in Blazor Server kills the *circuit*, not necessarily the browser console -- whether
+    /// it reaches console.error depends on client-side log wiring the test does not control.
+    /// The server-side log is where that exception unconditionally lands, so tests assert
+    /// against this instead of (or in addition to) the browser console.
+    /// </summary>
+    public static string HostOutput
+    {
+        get
+        {
+            lock (Sync)
+            {
+                return Buffer.ToString();
+            }
+        }
+    }
 
     [AssemblyInitialize]
     public static async Task StartAsync(TestContext _)
@@ -27,8 +49,19 @@ public static class SampleHostFixture
         {
             FileName = "dotnet",
             Arguments = $"run --project \"{sampleHostProject}\" --urls {BaseUrl}",
-            UseShellExecute = false
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         });
+
+        // Do not read these streams synchronously -- the child process's stdout/stderr
+        // pipes have a small OS buffer, and a synchronous ReadToEnd (or alternating
+        // reads) deadlocks as soon as the child writes enough to fill the pipe while we're
+        // blocked writing to (or reading from) the other one.
+        _host!.OutputDataReceived += (_, e) => Append(e.Data);
+        _host.ErrorDataReceived += (_, e) => Append(e.Data);
+        _host.BeginOutputReadLine();
+        _host.BeginErrorReadLine();
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
 
@@ -64,6 +97,19 @@ public static class SampleHostFixture
         }
 
         _host?.Dispose();
+    }
+
+    private static void Append(string? line)
+    {
+        if (line is null)
+        {
+            return;
+        }
+
+        lock (Sync)
+        {
+            Buffer.AppendLine(line);
+        }
     }
 
     // The brief's fixed relative path (../../../../../samples/...) assumes a specific
