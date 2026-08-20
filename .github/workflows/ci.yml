@@ -28,12 +28,6 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # The sample host references a Blazor WebAssembly project. A plain build may not need
-      # this workload, but the failure mode if it does is an unhelpful mid-build error, and
-      # installing it costs about a minute. Drop it if CI proves it unnecessary.
-      - name: Install wasm-tools workload
-        run: dotnet workload install wasm-tools
-
       - name: Build
         run: dotnet build --configuration Release
 
