@@ -90,8 +90,9 @@ get a fresh position from Orb's layout.
 Both render the same `OrbDemoView` component and are deliberately kept to nothing but
 `<OrbDemoView />`, so the only difference between them is the render mode — which is what makes
 "passes on one, fails on the other" a meaningful signal. A unit test enforces that. Add demo
-features to `OrbDemoView`, never to a page. Append `?styled=false` to either route to render the
-graph with no labels and no styles.
+features to `OrbDemoView`, never to a page. Both pages take a `?styling=` parameter —
+`full` (the default), `labels` for labels with no styles, or `none` for neither — and a button
+that cycles the same three modes.
 
 ```bash
 dotnet run --project samples/Pinknose.Memgraph.Orb.Razor.SampleHost
@@ -128,7 +129,11 @@ The version is not stored in a file. [MinVer](https://github.com/adamralph/minve
 from the nearest `v`-prefixed git tag, so tagging is the whole release action:
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.1.0
+```
+
+```bash
+git push origin v0.1.0
 ```
 
 That triggers the `release` workflow, which runs the unit and packaging tests, packs, refuses
