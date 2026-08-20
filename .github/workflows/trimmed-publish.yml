@@ -25,6 +25,12 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       # Required here: publishing the WebAssembly client with trimming relinks the runtime
       # through emscripten, which this workload provides.
       - name: Install wasm-tools workload
@@ -32,6 +38,11 @@ jobs:
 
       - name: Build
         run: dotnet build --configuration Release
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/*.csproj') }}
 
       - name: Install Chromium
         run: pwsh tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium

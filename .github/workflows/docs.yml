@@ -32,6 +32,12 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       # DocFX reads the compiled assembly and its XML docs, not the source, so the library has
       # to be built first -- and in Release, which is where docfx.json looks.
       - name: Build library
