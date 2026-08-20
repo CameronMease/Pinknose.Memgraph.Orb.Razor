@@ -63,18 +63,32 @@ function parseJson(value) {
 // Orb's setStyle() replaces the node's _style wholesale and merge() never touches it, so
 // skipping the call when a style is cleared (e.g. a consumer's Style/Label goes from
 // non-null back to null) would leave the previously-applied style painted forever -- there
-// would be no way back to the unstyled look. Pushing {} is safe: a node's default _style is
-// already {} and no setDefaultStyle is ever installed, so an empty object is a real reset,
-// not a foreign shape.
+// would be no way back to the unstyled look.
+//
+// Pushing {} is NOT safe here: OrbView's constructor unconditionally installs
+// setDefaultStyle(getDefaultGraphStyle()) (views/orb-view.js), and Graph.setup()/merge()
+// call _applyStyle() synchronously, right before this function runs, which paints that
+// default onto anything whose hasStyle() is false. setStyle replaces _style wholesale, so
+// {} would wipe that default and leave the node at getRadius() === 0 (invisible and
+// unhittable, since hit-testing uses the radius) and the edge at getWidth() === 0 (never
+// drawn -- see renderer/canvas/edge/base.js). Push Orb's own default back instead, so a
+// cleared style reverts to Orb's look rather than vanishing.
 function pushStyles(view, payload) {
     const graph = view.data;
+    const defaults = globalThis.Orb.getDefaultGraphStyle();
 
     for (const node of payload.nodes) {
-        graph.getNodeById(node.id)?.setStyle(node.style ?? {}, { isNotifySkipped: true });
+        const target = graph.getNodeById(node.id);
+        if (target) {
+            target.setStyle(node.style ?? defaults.getNodeStyle(target), { isNotifySkipped: true });
+        }
     }
 
     for (const edge of payload.edges) {
-        graph.getEdgeById(edge.id)?.setStyle(edge.style ?? {}, { isNotifySkipped: true });
+        const target = graph.getEdgeById(edge.id);
+        if (target) {
+            target.setStyle(edge.style ?? defaults.getEdgeStyle(target), { isNotifySkipped: true });
+        }
     }
 }
 

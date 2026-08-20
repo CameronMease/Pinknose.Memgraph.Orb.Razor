@@ -176,6 +176,33 @@ public class OrbGraphSmokeTests
     }
 
     [TestMethod]
+    public async Task UnstyledNodesAndEdges_RenderWithOrbsDefaultStyleNotZeroed()
+    {
+        // This test navigates itself, unlike the others above which rely on the
+        // [TestInitialize] navigation to /orb-demo: the regression under test only
+        // reproduces for nodes/edges with neither Label nor Style set, and /orb-demo's
+        // Person always sets Style while its Relationship always sets Label.
+        await _page.GotoAsync($"{SampleHostFixture.BaseUrl}/orb-unstyled");
+        await _page.WaitForFunctionAsync("() => !!document.querySelector('.orb-graph canvas')");
+        await _page.WaitForTimeoutAsync(2000);
+
+        // Regression: pushStyles() used to push {} for nodes/edges with no projected style,
+        // wholesale-replacing the default OrbView's constructor had just applied via
+        // setDefaultStyle()/_applyStyle(). That left getRadius() === 0 (invisible, unhittable)
+        // and getWidth() === 0 (edge never drawn). Assert Orb's real default survived instead.
+        var allNodesHaveRadius = await _page.EvaluateAsync<bool>(
+            "() => window.__orbTestView.data.getNodes().every(n => n.getRadius() > 0)");
+        Assert.IsTrue(allNodesHaveRadius, "every unstyled node must render at a non-zero radius");
+
+        var allEdgesHaveWidth = await _page.EvaluateAsync<bool>(
+            "() => window.__orbTestView.data.getEdges().every(e => e.getWidth() > 0)");
+        Assert.IsTrue(allEdgesHaveWidth, "every unstyled edge must render at a non-zero width");
+
+        var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
+        Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
+    }
+
+    [TestMethod]
     public async Task NavigatingAway_DisposesWithoutServerError()
     {
         await _page.ClickAsync("a[href='counter']");
