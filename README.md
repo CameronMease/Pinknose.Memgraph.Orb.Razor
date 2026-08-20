@@ -37,6 +37,13 @@ public sealed record Relationship(string Id, string Start, string End) : IOrbEdg
 }
 ```
 
+## Styles are merged over Orb's defaults
+
+An `OrbNodeStyle`/`OrbEdgeStyle` only has to carry what you want to change. Whatever you leave
+unset falls back to Orb's own default rather than to nothing, so a node with a `Label` and no
+`Style` still renders at Orb's default size, and setting only `Color` does not cost you the
+size. Setting `Style` back to `null` returns the node or edge to Orb's defaults entirely.
+
 ## The type-argument trap (read this first)
 
 Blazor can infer `TNode`/`TEdge` from the `Nodes`/`Edges` collections **only while the

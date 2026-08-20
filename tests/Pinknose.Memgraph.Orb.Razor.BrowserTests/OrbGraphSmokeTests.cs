@@ -245,17 +245,23 @@ public class OrbGraphSmokeTests
     [DataRow(WasmRoute)]
     public async Task UnstyledNodesAndEdges_RenderWithOrbsDefaultStyleNotZeroed(string route)
     {
-        // ?styled=false makes OrbDemoView build its nodes and edges with neither Label nor
-        // Style set, which is the only case that reproduces the regression below. It has to
-        // be set on the initial navigation rather than by clicking the toggle, because the
-        // regression is about the FIRST push for a node that never had a style.
-        await GoToAsync($"{route}?styled=false");
+        // ?styling=none makes OrbDemoView build its nodes and edges with neither Label nor
+        // Style set, so no style is sent for them at all. It has to be set on the initial
+        // navigation rather than by clicking through the modes, because the regression is
+        // about the FIRST push for a node that never had a style.
+        await GoToAsync($"{route}?styling=none");
 
         // Regression: pushStyles() used to push {} for nodes/edges with no projected style,
         // wholesale-replacing the default OrbView's constructor had just applied via
         // setDefaultStyle()/_applyStyle(). That left getRadius() === 0 (invisible, unhittable)
         // and getWidth() === 0 (edge never drawn). Assert Orb's real default survived instead.
         await AssertOrbDefaultStyleSurvivedAsync();
+
+        // Merging over Orb's defaults must not hand back a label the caller cleared: Orb keeps
+        // a label inside the style object, so a default that carried one would reintroduce it.
+        var labelled = await _page.EvaluateAsync<bool>(
+            "() => window.__orbTestView.data.getNodes().some(n => !!n.getLabel())");
+        Assert.IsFalse(labelled, "a node with no Label must not render one");
 
         var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
         Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
@@ -277,7 +283,9 @@ public class OrbGraphSmokeTests
             "precondition: the styled graph must not already have uniform radii");
 
         await _page.ClickAsync("#style-toggle-btn");
-        await Expect(_page.Locator("#style-state")).ToHaveTextAsync("unstyled");
+        await Expect(_page.Locator("#style-state")).ToHaveTextAsync("labels");
+        await _page.ClickAsync("#style-toggle-btn");
+        await Expect(_page.Locator("#style-state")).ToHaveTextAsync("none");
         await _page.WaitForTimeoutAsync(500);
 
         // Two failure modes at once: pushing {} would zero these (the radius-0 regression),
@@ -291,6 +299,42 @@ public class OrbGraphSmokeTests
             clearedRadii.Distinct().Count(),
             "clearing every style must leave every node on Orb's single default size, but "
                 + $"the radii were [{string.Join(", ", clearedRadii)}]");
+    }
+
+    [TestMethod]
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task NodesWithOnlyALabel_KeepOrbsDefaultSize(string route)
+    {
+        // ?styling=labels sets Label and leaves Style null. Orb carries a node's label inside
+        // its style object, so the projector has to send a style for it -- but one that holds
+        // nothing except the label. setStyle() replaces a node's style wholesale, so pushing
+        // that partial style unmerged costs the node every default it had, and size defaulting
+        // to 0 makes it invisible and unhittable.
+        await GoToAsync($"{route}?styling=labels");
+
+        var radii = await ReadRadiiAsync();
+
+        Assert.IsTrue(
+            radii.All(radius => radius > 0),
+            $"a label must not cost a node its default size, but the radii were [{string.Join(", ", radii)}]");
+    }
+
+    [TestMethod]
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
+    public async Task EdgesWithOnlyALabel_KeepOrbsDefaultWidth(string route)
+    {
+        // The demo's edges carry a Kind label and no style of their own, so this is the
+        // default view of the sample -- and an edge whose width falls back to 0 is never
+        // drawn at all (Orb's canvas edge renderer returns early on a falsy width).
+        await GoToAsync(route);
+
+        var widths = await ReadEdgeWidthsAsync();
+
+        Assert.IsTrue(
+            widths.All(width => width > 0),
+            $"a label must not cost an edge its default width, but the widths were [{string.Join(", ", widths)}]");
     }
 
     [TestMethod]
@@ -340,6 +384,14 @@ public class OrbGraphSmokeTests
         var allEdgesHaveWidth = await _page.EvaluateAsync<bool>(
             "() => window.__orbTestView.data.getEdges().every(e => e.getWidth() > 0)");
         Assert.IsTrue(allEdgesHaveWidth, "every unstyled edge must render at a non-zero width");
+    }
+
+    private async Task<double[]> ReadEdgeWidthsAsync()
+    {
+        var json = await _page.EvaluateAsync<string>(
+            "() => JSON.stringify(window.__orbTestView.data.getEdges().map(e => e.getWidth()))");
+
+        return System.Text.Json.JsonSerializer.Deserialize<double[]>(json)!;
     }
 
     private async Task<double[]> ReadRadiiAsync()

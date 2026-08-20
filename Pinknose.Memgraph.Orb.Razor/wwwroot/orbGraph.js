@@ -77,17 +77,29 @@ function pushStyles(view, payload) {
     const graph = view.data;
     const defaults = globalThis.Orb.getDefaultGraphStyle();
 
+    // A projected style is partial by nature: it carries only the properties the caller set,
+    // plus the label, which Orb keeps inside the style object rather than beside it. Orb's
+    // setStyle() REPLACES the style wholesale, so pushing that partial object on its own
+    // costs the target every default it had -- and both defaults that matter are load-bearing:
+    // a node's size feeds getRadius() (0 renders it invisible and unhittable) and an edge's
+    // width feeds getWidth() (0 means the renderer returns before drawing it). Merging over
+    // Orb's own defaults keeps everything the caller did not speak to, including for a target
+    // with no projected style at all, where the spread of null leaves the defaults untouched.
     for (const node of payload.nodes) {
         const target = graph.getNodeById(node.id);
         if (target) {
-            target.setStyle(node.style ?? defaults.getNodeStyle(target), { isNotifySkipped: true });
+            target.setStyle(
+                { ...defaults.getNodeStyle(target), ...node.style },
+                { isNotifySkipped: true });
         }
     }
 
     for (const edge of payload.edges) {
         const target = graph.getEdgeById(edge.id);
         if (target) {
-            target.setStyle(edge.style ?? defaults.getEdgeStyle(target), { isNotifySkipped: true });
+            target.setStyle(
+                { ...defaults.getEdgeStyle(target), ...edge.style },
+                { isNotifySkipped: true });
         }
     }
 }
