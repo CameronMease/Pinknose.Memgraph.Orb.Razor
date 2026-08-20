@@ -28,8 +28,24 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # A fresh runner starts with an empty package cache, so every run re-downloads the same
+      # packages from nuget.org. Keyed on the project files, which is what decides the set.
+      - uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Build
         run: dotnet build --configuration Release
+
+      # Chromium is about 100MB and identical between runs; the version is pinned by the
+      # Playwright package reference, so the test project file is the right cache key. The
+      # install step below still runs, but becomes a no-op for the download when this hits.
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/*.csproj') }}
 
       # Ships in the Microsoft.Playwright package's build output; installs the browser binary
       # and the system libraries Chromium needs on a bare runner.
