@@ -12,48 +12,6 @@ namespace Pinknose.Memgraph.Orb.Razor.BrowserTests;
 [TestClass]
 public class OrbGraphSmokeTests
 {
-    private const string CountPaintedPixels = """
-        () => {
-            const c = document.querySelector('.orb-graph canvas');
-            if (!c) return -1;
-            const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-            let painted = 0;
-            for (let i = 3; i < d.length; i += 4) { if (d[i] !== 0) painted++; }
-            return painted;
-        }
-        """;
-
-    private const string ReadNodePositions = """
-        () => {
-            const v = window.__orbTestView;
-            return v ? JSON.stringify(v.data.getNodePositions()) : null;
-        }
-        """;
-
-    // The brief's version reads n.getCenter() and treats it directly as a canvas point.
-    // getCenter() actually returns the node's position in Orb's *graph* (simulation) space,
-    // not canvas pixels: Orb's canvas renderer draws with
-    //   ctx.translate(transform.x, transform.y); ctx.scale(transform.k, transform.k);
-    //   ctx.translate(width / 2, height / 2)   // OrbView always calls translateOriginToCenter()
-    // so a graph point (gx, gy) lands on the canvas at
-    //   (transform.x + transform.k * (gx + width / 2), transform.y + transform.k * (gy + height / 2)).
-    // view._renderer is not exposed via a public getter but is a plain (non-#private) field,
-    // so it is reachable from test code the same way the brief already reaches into
-    // window.__orbTestView. Verified against orb.min.js 1.0.2 (renderer's `_render`,
-    // `getSimulationPosition`, and `translateOriginToCenter` implementations).
-    private const string FindNodePoint = """
-        () => {
-            const v = window.__orbTestView;
-            const n = v.data.getNodes()[0];
-            const c = n.getCenter();
-            const r = v._renderer;
-            const t = r.transform;
-            const x = t.x + t.k * (c.x + r.width / 2);
-            const y = t.y + t.k * (c.y + r.height / 2);
-            return JSON.stringify({ x, y });
-        }
-        """;
-
     // The two sample pages render the same OrbDemoView component and differ only by render
     // mode, so every test below runs against both: anything that passes on one and fails on
     // the other is a real Blazor Server vs WebAssembly difference in the library, not a
@@ -68,6 +26,7 @@ public class OrbGraphSmokeTests
 
     private IBrowserContext _context = null!;
     private IPage _page = null!;
+    private OrbPageDriver _driver = null!;
 
     [ClassInitialize]
     public static async Task LaunchBrowserAsync(TestContext _)
@@ -88,6 +47,7 @@ public class OrbGraphSmokeTests
     {
         _context = await _browser.NewContextAsync();
         _page = await _context.NewPageAsync();
+        _driver = new OrbPageDriver(_page);
         _page.Console += (_, message) =>
         {
             if (message.Type == "error")
@@ -109,14 +69,7 @@ public class OrbGraphSmokeTests
     private async Task GoToAsync(string route)
     {
         await _page.GotoAsync($"{SampleHostFixture.BaseUrl}{route}");
-        // WebAssembly has to download and start the runtime before it renders anything, which
-        // is far slower than a Server circuit -- especially on the first test to hit it.
-        await _page.WaitForFunctionAsync(
-            "() => !!document.querySelector('.orb-graph canvas')",
-            null,
-            new PageWaitForFunctionOptions { Timeout = 60_000 });
-        // Let the force simulation settle so pixel and position reads are stable.
-        await _page.WaitForTimeoutAsync(2000);
+        await _driver.WaitForGraphAsync();
     }
 
     // Everything else in this class assumes the two routes really are Server and WebAssembly.
@@ -144,7 +97,7 @@ public class OrbGraphSmokeTests
     {
         await GoToAsync(route);
 
-        var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
+        var painted = await _driver.CountPaintedPixelsAsync();
 
         Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
     }
@@ -156,7 +109,7 @@ public class OrbGraphSmokeTests
     {
         await GoToAsync(route);
 
-        await ClickFirstNodeAsync();
+        await _driver.ClickFirstNodeAsync();
 
         await Expect(_page.Locator("#selection-label")).Not.ToHaveTextAsync("none");
     }
@@ -169,7 +122,7 @@ public class OrbGraphSmokeTests
         await GoToAsync(route);
 
         var box = await _page.Locator(".orb-graph canvas").BoundingBoxAsync();
-        var position = await FindNodePointAsync();
+        var position = await _driver.FindNodePointAsync();
 
         await _page.Mouse.MoveAsync(box!.X + position.X, box.Y + position.Y);
         await Expect(_page.Locator("#hover-label")).Not.ToHaveTextAsync("none");
@@ -185,15 +138,12 @@ public class OrbGraphSmokeTests
     {
         await GoToAsync(route);
 
-        var before = await _page.EvaluateAsync<int>(
-            "() => window.__orbTestView.data.getNodeCount()");
+        var before = await _driver.CountNodesAsync();
 
         await _page.ClickAsync("#remove-btn");
-        await _page.WaitForFunctionAsync(
-            $"() => window.__orbTestView.data.getNodeCount() === {before - 1}");
+        await _driver.WaitForNodeCountAsync(before - 1);
 
-        var edges = await _page.EvaluateAsync<int>(
-            "() => window.__orbTestView.data.getEdgeCount()");
+        var edges = await _driver.CountEdgesAsync();
 
         Assert.AreEqual(1, edges, "removing a node must take its edges with it");
     }
@@ -205,16 +155,14 @@ public class OrbGraphSmokeTests
     {
         await GoToAsync(route);
 
-        var before = await ReadPositionAsync("n1");
+        var before = await _driver.ReadPositionAsync("n1");
 
-        var nodeCountBefore = await _page.EvaluateAsync<int>(
-            "() => window.__orbTestView.data.getNodeCount()");
+        var nodeCountBefore = await _driver.CountNodesAsync();
 
         await _page.ClickAsync("#remove-btn");
         // Wait for the actual state change (merge/remove has applied) rather than guessing
         // how long that takes; the fixed wait below is for a different, unavoidable reason.
-        await _page.WaitForFunctionAsync(
-            $"() => window.__orbTestView.data.getNodeCount() === {nodeCountBefore - 1}");
+        await _driver.WaitForNodeCountAsync(nodeCountBefore - 1);
 
         // Orb's remove()/merge() both funnel into activateSimulation(), which pins or
         // unpins nodes depending on isPhysicsEnabled. This sample never sets
@@ -225,8 +173,8 @@ public class OrbGraphSmokeTests
         // (e.g. physics gets turned on) and a node legitimately drifts a little.
         await _page.WaitForTimeoutAsync(500);
 
-        var after = await ReadPositionAsync("n1");
-        var distance = Distance(before, after);
+        var after = await _driver.ReadPositionAsync("n1");
+        var distance = OrbPageDriver.Distance(before, after);
 
         // The regression this test exists to catch is updateData() calling setup() instead
         // of merge(): setup() clears all positions and lays the graph out from scratch.
@@ -259,11 +207,12 @@ public class OrbGraphSmokeTests
 
         // Merging over Orb's defaults must not hand back a label the caller cleared: Orb keeps
         // a label inside the style object, so a default that carried one would reintroduce it.
-        var labelled = await _page.EvaluateAsync<bool>(
-            "() => window.__orbTestView.data.getNodes().some(n => !!n.getLabel())");
-        Assert.IsFalse(labelled, "a node with no Label must not render one");
+        var labels = await _driver.ReadLabelsAsync();
+        Assert.IsTrue(
+            labels.All(string.IsNullOrEmpty),
+            $"a node with no Label must not render one, but got [{string.Join(", ", labels)}]");
 
-        var painted = await _page.EvaluateAsync<int>(CountPaintedPixels);
+        var painted = await _driver.CountPaintedPixelsAsync();
         Assert.IsGreaterThan(0, painted, "the canvas rendered nothing");
     }
 
@@ -276,7 +225,7 @@ public class OrbGraphSmokeTests
 
         // The styled graph gives Alice radius 12 and everyone else 8, so "all radii equal"
         // below is only true once the styles have actually been cleared.
-        var styledRadii = await ReadRadiiAsync();
+        var styledRadii = await _driver.ReadRadiiAsync();
         Assert.AreNotEqual(
             1,
             styledRadii.Distinct().Count(),
@@ -293,7 +242,7 @@ public class OrbGraphSmokeTests
         // the uniformity check below catches.
         await AssertOrbDefaultStyleSurvivedAsync();
 
-        var clearedRadii = await ReadRadiiAsync();
+        var clearedRadii = await _driver.ReadRadiiAsync();
         Assert.AreEqual(
             1,
             clearedRadii.Distinct().Count(),
@@ -313,7 +262,7 @@ public class OrbGraphSmokeTests
         // to 0 makes it invisible and unhittable.
         await GoToAsync($"{route}?styling=labels");
 
-        var radii = await ReadRadiiAsync();
+        var radii = await _driver.ReadRadiiAsync();
 
         Assert.IsTrue(
             radii.All(radius => radius > 0),
@@ -330,7 +279,7 @@ public class OrbGraphSmokeTests
         // drawn at all (Orb's canvas edge renderer returns early on a falsy width).
         await GoToAsync(route);
 
-        var widths = await ReadEdgeWidthsAsync();
+        var widths = await _driver.ReadEdgeWidthsAsync();
 
         Assert.IsTrue(
             widths.All(width => width > 0),
@@ -377,29 +326,15 @@ public class OrbGraphSmokeTests
 
     private async Task AssertOrbDefaultStyleSurvivedAsync()
     {
-        var allNodesHaveRadius = await _page.EvaluateAsync<bool>(
-            "() => window.__orbTestView.data.getNodes().every(n => n.getRadius() > 0)");
-        Assert.IsTrue(allNodesHaveRadius, "every unstyled node must render at a non-zero radius");
+        var radii = await _driver.ReadRadiiAsync();
+        Assert.IsTrue(
+            radii.All(radius => radius > 0),
+            $"every unstyled node must render at a non-zero radius, but got [{string.Join(", ", radii)}]");
 
-        var allEdgesHaveWidth = await _page.EvaluateAsync<bool>(
-            "() => window.__orbTestView.data.getEdges().every(e => e.getWidth() > 0)");
-        Assert.IsTrue(allEdgesHaveWidth, "every unstyled edge must render at a non-zero width");
-    }
-
-    private async Task<double[]> ReadEdgeWidthsAsync()
-    {
-        var json = await _page.EvaluateAsync<string>(
-            "() => JSON.stringify(window.__orbTestView.data.getEdges().map(e => e.getWidth()))");
-
-        return System.Text.Json.JsonSerializer.Deserialize<double[]>(json)!;
-    }
-
-    private async Task<double[]> ReadRadiiAsync()
-    {
-        var json = await _page.EvaluateAsync<string>(
-            "() => JSON.stringify(window.__orbTestView.data.getNodes().map(n => n.getRadius()))");
-
-        return System.Text.Json.JsonSerializer.Deserialize<double[]>(json)!;
+        var widths = await _driver.ReadEdgeWidthsAsync();
+        Assert.IsTrue(
+            widths.All(width => width > 0),
+            $"every unstyled edge must render at a non-zero width, but got [{string.Join(", ", widths)}]");
     }
 
     private async Task<bool> LoadedTheWebAssemblyRuntimeAsync()
@@ -412,48 +347,4 @@ public class OrbGraphSmokeTests
             """);
     }
 
-    private async Task ClickFirstNodeAsync()
-    {
-        var box = await _page.Locator(".orb-graph canvas").BoundingBoxAsync();
-        var position = await FindNodePointAsync();
-
-        await _page.Mouse.ClickAsync(box!.X + position.X, box.Y + position.Y);
-    }
-
-    private async Task<(float X, float Y)> FindNodePointAsync()
-    {
-        var json = await _page.EvaluateAsync<string>(FindNodePoint);
-
-        var point = System.Text.Json.JsonDocument.Parse(json).RootElement;
-        return ((float)point.GetProperty("x").GetDouble(),
-                (float)point.GetProperty("y").GetDouble());
-    }
-
-    private async Task<(double X, double Y)> ReadPositionAsync(string id)
-    {
-        var json = await _page.EvaluateAsync<string>(ReadNodePositions);
-        return ExtractPosition(json, id);
-    }
-
-    private static (double X, double Y) ExtractPosition(string positionsJson, string id)
-    {
-        using var doc = System.Text.Json.JsonDocument.Parse(positionsJson);
-
-        foreach (var element in doc.RootElement.EnumerateArray())
-        {
-            if (element.GetProperty("id").GetString() == id)
-            {
-                return (element.GetProperty("x").GetDouble(), element.GetProperty("y").GetDouble());
-            }
-        }
-
-        throw new InvalidOperationException($"No node with id '{id}' in the position snapshot.");
-    }
-
-    private static double Distance((double X, double Y) a, (double X, double Y) b)
-    {
-        var dx = a.X - b.X;
-        var dy = a.Y - b.Y;
-        return Math.Sqrt(dx * dx + dy * dy);
-    }
 }

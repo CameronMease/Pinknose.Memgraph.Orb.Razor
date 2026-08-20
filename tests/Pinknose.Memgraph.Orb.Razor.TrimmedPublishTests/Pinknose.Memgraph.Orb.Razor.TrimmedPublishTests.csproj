@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- See the note in the BrowserTests csproj for why this is the plain Playwright driver
+         and not Microsoft.Playwright.MSTest. -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
+    <PackageReference Include="MSTest" Version="4.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared with the dev-build suite on purpose: a trimming result is only meaningful if
+         "the graph rendered" and "click the first node" mean exactly the same thing here as
+         they do there. Linked rather than copied so the two cannot drift. -->
+    <Compile Include="..\Pinknose.Memgraph.Orb.Razor.BrowserTests\OrbPageDriver.cs"
+             Link="OrbPageDriver.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+</Project>

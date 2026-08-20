@@ -6,6 +6,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/Pinknose.Memgraph.Orb.Razor.BrowserTests.csproj" />
     <Project Path="tests/Pinknose.Memgraph.Orb.Razor.Tests/Pinknose.Memgraph.Orb.Razor.Tests.csproj" />
+    <Project Path="tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTests.csproj" />
   </Folder>
   <Project Path="Pinknose.Memgraph.Orb.Razor/Pinknose.Memgraph.Orb.Razor.csproj" />
 </Solution>

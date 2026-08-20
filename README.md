@@ -6,9 +6,9 @@ component driven by your own domain types instead of hand-written JS interop.
 
 **Verification status:** exercised end-to-end (unit tests + a Playwright browser suite) under
 **both Blazor Server and Blazor WebAssembly** — the sample host serves the same demo component
-under each render mode, and every browser test runs against both. What is still unverified is
-**publish trimming**: the suite runs a development build, which does not trim, so a trimmed
-WASM publish has never been exercised.
+under each render mode, and every browser test runs against both. A trimmed WebAssembly
+publish is covered too, by an opt-in suite (see below) that publishes with trimming on and
+drives the published app.
 
 ## Minimal example
 
@@ -89,6 +89,28 @@ graph with no labels and no styles.
 dotnet run --project samples/Pinknose.Memgraph.Orb.Razor.SampleHost
 ```
 
+## Running the tests
+
+```bash
+dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests
+```
+
+```bash
+dotnet test tests/Pinknose.Memgraph.Orb.Razor.BrowserTests
+```
+
+The browser suite starts the sample host itself and drives both routes with Playwright.
+
+A third suite covers a **trimmed** WebAssembly publish — the case a `dotnet run` build cannot
+reach, since it never trims. It is opt-in because it wipes the Release artifacts and publishes
+from scratch (forcing ILLink to actually run, without which its warnings would be cached away
+and the suite would report a cleaner library than it has). Set `ORB_TRIM_TESTS=1` to run it;
+without that its tests report inconclusive and nothing is published:
+
+```bash
+ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTests
+```
+
 ## Known gaps
 
 - **`Settings` going non-null → null is currently a no-op.** Once you've supplied an
@@ -96,9 +118,11 @@ dotnet run --project samples/Pinknose.Memgraph.Orb.Razor.SampleHost
   or reset anything already applied — the component only pushes a settings update when the new
   value is both non-null and different from what was last sent. If you need to change
   settings, mutate/replace the object; don't rely on nulling it out.
-- **A trimmed WebAssembly publish has never been run.** The WASM coverage above comes from a
-  development build, which does not trim. The library serializes only its own types, but
-  whether a `dotnet publish` with trimming enabled keeps everything the reflection-based
-  serializer and `[JSInvokable]` binding need is still unverified.
+- **The trimmer reports four warnings against the library.** All four are `IL2026` on the
+  reflection-based JSON path (`OrbJsonContext`, `OrbLayoutConverter`): the trimmer cannot
+  follow it, so it cannot promise the types survive. In practice they do — the trimmed-publish
+  suite drives a real trimmed build and checks styles, labels, updates and events all still
+  work — but the warnings stay until the serializer moves to a source-generated
+  `JsonSerializerContext`.
 - **`OrbMapView` (geo layout) is not supported.** This library wraps Orb's canvas graph view
   (`OrbView`) only. Orb's map-based view is out of scope.
