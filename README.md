@@ -131,8 +131,13 @@ git tag v0.1.0 && git push origin v0.1.0
 ```
 
 That triggers the `release` workflow, which runs the unit and packaging tests, packs, refuses
-to continue if the packed version does not match the tag, pushes to NuGet.org, and opens a
-GitHub Release. It needs a `NUGET_API_KEY` repository secret.
+to continue if the packed version does not match the tag, uploads the packages as run
+artifacts, and opens a GitHub Release with generated notes.
+
+**Publishing to NuGet.org is currently disabled** — the upload step is commented out in
+`.github/workflows/release.yml` while the library is pre-release, so tagging exercises the
+whole chain without pushing anything public. Enabling it means uncommenting that step and
+adding a `NUGET_API_KEY` repository secret.
 
 Commits that are not on a tag build as `0.1.0-alpha.N`, so nothing can accidentally pack as a
 release. Versioning is independent of the vendored Orb version — bumping Orb is at minimum a
