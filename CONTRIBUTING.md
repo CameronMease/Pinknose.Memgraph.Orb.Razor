@@ -105,13 +105,22 @@ git push origin v0.1.0
 ```
 
 That triggers the `release` workflow, which runs the unit and packaging tests, packs, refuses
-to continue if the packed version does not match the tag, uploads the packages as run
-artifacts, and opens a GitHub Release with generated notes.
+to continue if the packed version does not match the tag, publishes to NuGet.org, uploads the
+packages as run artifacts, and opens a GitHub Release with generated notes.
 
-**Publishing to NuGet.org is currently disabled** — the upload step is commented out in
-`.github/workflows/release.yml` while the library is pre-release, so tagging exercises the
-whole chain without pushing anything public. Enabling it means uncommenting that step and
-adding a `NUGET_API_KEY` repository secret.
+There is no API key anywhere. Publishing needs one repository secret, `NUGET_USER`, holding
+the nuget.org profile name that owns the policy. Publishing itself uses **trusted publishing**: GitHub signs a token
+describing this repository and workflow, nuget.org checks it against a policy registered for
+this package, and returns a key valid for one hour. Nothing long-lived exists to leak or
+rotate. Two consequences worth knowing:
+
+- The policy names `release.yml` by filename. **Renaming that workflow breaks publishing**
+  until the policy on nuget.org is updated to match.
+- The policy is tied to the nuget.org account that owns it, so it goes inactive if that
+  account loses access to the package.
+
+A published version can be unlisted but never replaced or deleted, which is why the
+version-matches-tag check runs before the push.
 
 Commits that are not on a tag build as `0.1.0-alpha.N`, so nothing can accidentally pack as a
 release. Versioning is independent of the vendored Orb version — bumping Orb is at minimum a
