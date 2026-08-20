@@ -678,6 +678,13 @@ namespace Pinknose.Memgraph.Orb.Razor;
 public abstract class OrbLayout
 {
     /// <summary>The discriminator Orb expects in <c>layout.type</c>.</summary>
+    /// <remarks>
+    /// [JsonIgnore] is required, and must be repeated on every override. The layout
+    /// converter serializes the instance itself into the inner "options" object, so
+    /// without it this property is emitted a second time as a bogus "layoutType" key.
+    /// The attribute on the abstract base alone is NOT inherited by overrides.
+    /// </remarks>
+    [JsonIgnore]
     public abstract string LayoutType { get; }
 
     public OrbAnchor? AnchorX { get; set; }
@@ -686,6 +693,7 @@ public abstract class OrbLayout
 
 public sealed class OrbForceLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "force";
 
     public bool? IsPhysicsEnabled { get; set; }
@@ -708,6 +716,7 @@ public sealed class OrbForceLayout : OrbLayout
 
 public sealed class OrbGridLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "grid";
 
     public double? RowGap { get; set; }
@@ -716,6 +725,7 @@ public sealed class OrbGridLayout : OrbLayout
 
 public sealed class OrbCircularLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "circular";
 
     public double? Radius { get; set; }
@@ -725,6 +735,7 @@ public sealed class OrbCircularLayout : OrbLayout
 
 public sealed class OrbHierarchicalLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "hierarchical";
 
     public double? NodeGap { get; set; }
@@ -1134,6 +1145,7 @@ internal sealed class OrbEdgeLineStyleConverter : JsonConverter<OrbEdgeLineStyle
 ```csharp
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Pinknose.Memgraph.Orb.Razor;
 
@@ -1161,7 +1173,10 @@ internal static class OrbJson
         var options = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+
+            // Required: MakeReadOnly() below throws at run time if the resolver is null.
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
         };
 
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
