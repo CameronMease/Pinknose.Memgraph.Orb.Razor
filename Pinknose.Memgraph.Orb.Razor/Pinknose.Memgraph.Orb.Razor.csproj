@@ -6,6 +6,42 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <PropertyGroup Label="Package">
+    <PackageId>Pinknose.Memgraph.Orb.Razor</PackageId>
+    <Authors>Cameron Mease</Authors>
+    <Description>A Blazor component library wrapping Memgraph's Orb graph visualization library (@memgraph/orb 1.0.2). Renders a force-directed graph from your own domain types through a typed OrbGraph component, with no hand-written JS interop. Verified under both Blazor Server and WebAssembly, including a trimmed publish.</Description>
+    <PackageTags>blazor;graph;visualization;memgraph;orb;force-directed;network;razor-class-library</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Symbols and source stepping. PublishRepositoryUrl + EmbedUntrackedSources are what let
+         a consumer debugging into this package land on the real source. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Versioning">
+    <!-- The git tag IS the version: MinVer reads the nearest v-prefixed tag, and any commit
+         that is not exactly on one packs as a pre-release. NuGet versions are immutable, so a
+         version number kept in a file (which can disagree with what was actually tagged and
+         released) is a mistake with no fix after the fact. -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+
+    <!-- Before the first tag exists, builds version as 0.1.0-alpha.N rather than 0.0.0-alpha.N,
+         so a package built today already sorts below the 0.1.0 release it is heading for.
+         Raise this floor whenever the next planned version moves past it. -->
+    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <SupportedPlatform Include="browser" />
@@ -13,6 +49,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.11" />
+    <!-- Build-time only: it sets the version and ships nothing into the package. -->
+    <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

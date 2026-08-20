@@ -121,6 +121,23 @@ ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTes
 CI runs the first two suites on every push and pull request. The trimmed suite runs nightly and
 on demand (Actions → trimmed-publish → Run workflow), since each run publishes from scratch.
 
+## Releasing
+
+The version is not stored in a file. [MinVer](https://github.com/adamralph/minver) derives it
+from the nearest `v`-prefixed git tag, so tagging is the whole release action:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+That triggers the `release` workflow, which runs the unit and packaging tests, packs, refuses
+to continue if the packed version does not match the tag, pushes to NuGet.org, and opens a
+GitHub Release. It needs a `NUGET_API_KEY` repository secret.
+
+Commits that are not on a tag build as `0.1.0-alpha.N`, so nothing can accidentally pack as a
+release. Versioning is independent of the vendored Orb version — bumping Orb is at minimum a
+minor release here, since it changes rendering defaults and the bundle's integrity hash.
+
 ## Known gaps
 
 - **`OrbMapView` (geo layout) is not supported.** This library wraps Orb's canvas graph view

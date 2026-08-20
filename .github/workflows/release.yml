@@ -1,0 +1,75 @@
+name: release
+
+# Pushing a v-prefixed tag is the single act that releases. There is no version to bump
+# anywhere first: MinVer reads this tag and the package version follows from it.
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # Only for the GitHub Release step at the end; drop both if you would rather write
+      # release notes by hand.
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Load-bearing. MinVer derives the version from tags and history, and the default
+          # shallow checkout has neither -- which would silently produce a pre-release package
+          # on a release tag rather than failing.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Fast, and includes the packaging tests, which check the vendored Orb bundle and the
+      # interop module actually made it into the .nupkg. A package missing those restores
+      # cleanly and then 404s at run time, and NuGet versions cannot be replaced.
+      - name: Unit tests
+        run: dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --configuration Release
+
+      - name: Pack
+        run: >
+          dotnet pack Pinknose.Memgraph.Orb.Razor/Pinknose.Memgraph.Orb.Razor.csproj
+          --configuration Release
+          --output artifacts
+          -p:ContinuousIntegrationBuild=true
+
+      # Catches the shallow-clone failure above, and anything else that would put a version in
+      # the package that is not the version you tagged. Cheap, and the alternative is an
+      # immutable mistake on nuget.org.
+      - name: Version must match the tag
+        run: |
+          expected="${GITHUB_REF_NAME#v}"
+          actual=$(ls artifacts/*.nupkg | sed -E 's|.*/Pinknose\.Memgraph\.Orb\.Razor\.(.*)\.nupkg|\1|')
+          echo "tag=$expected package=$actual"
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::tag $GITHUB_REF_NAME would publish version $actual"
+            exit 1
+          fi
+
+      - name: Push to NuGet
+        # Requires a NUGET_API_KEY repository secret. Without it this step fails and nothing
+        # is published; the tag and the packed artifacts are unaffected.
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key ${{ secrets.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/*
+
+      - name: GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
