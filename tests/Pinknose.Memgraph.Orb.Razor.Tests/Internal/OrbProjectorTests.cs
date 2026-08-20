@@ -1,4 +1,4 @@
-namespace Pinknose.Memgraph.Orb.Razor.Tests.Internal;
+﻿namespace Pinknose.Memgraph.Orb.Razor.Tests.Internal;
 
 [TestClass]
 public class OrbProjectorTests
@@ -166,5 +166,17 @@ public class OrbProjectorTests
     {
         Assert.ThrowsExactly<InvalidOperationException>(
             () => Project([new OrbNode("n1"), new OrbNode("n1")], []));
+    }
+
+    [TestMethod]
+    public void Project_ThrowsOnDuplicateEdgeId()
+    {
+        // The node case above was covered from the start and this one never was, even though
+        // both feed the same id-to-instance maps that events are resolved through: a duplicate
+        // would make one of the two edges unreachable from every edge callback.
+        Assert.ThrowsExactly<InvalidOperationException>(
+            () => Project(
+                [new OrbNode("n1"), new OrbNode("n2")],
+                [new OrbEdge("e1", "n1", "n2"), new OrbEdge("e1", "n2", "n1")]));
     }
 }

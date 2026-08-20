@@ -8,7 +8,7 @@ namespace Pinknose.Memgraph.Orb.Razor;
 /// </remarks>
 public sealed class OrbEdgeLineStyle
 {
-    private OrbEdgeLineStyle(string kind, double[]? pattern = null)
+    private OrbEdgeLineStyle(string kind, IReadOnlyList<double>? pattern = null)
     {
         Kind = kind;
         Pattern = pattern;
@@ -20,9 +20,10 @@ public sealed class OrbEdgeLineStyle
     /// <summary>The dash pattern for a custom style; <see langword="null"/> for the others.</summary>
     /// <remarks>
     /// Alternating lengths of drawn and blank segments, as the HTML canvas
-    /// <c>setLineDash</c> takes them.
+    /// <c>setLineDash</c> takes them. Read-only, and copied from what the caller passed, so a
+    /// style cannot change under an edge that is already using it.
     /// </remarks>
-    public double[]? Pattern { get; }
+    public IReadOnlyList<double>? Pattern { get; }
 
     /// <summary>An unbroken line. Orb's default.</summary>
     public static OrbEdgeLineStyle Solid { get; } = new("solid");
@@ -52,6 +53,10 @@ public sealed class OrbEdgeLineStyle
             throw new ArgumentException("A custom line style needs at least one dash length.", nameof(pattern));
         }
 
-        return new OrbEdgeLineStyle("custom", pattern);
+        // Copied, not kept: the array belongs to the caller, and holding it would let a later
+        // edit of theirs repaint an edge configured long ago, through a type whose API offers
+        // no hint that it is mutable. Wrapped as well as copied, because an IReadOnlyList that
+        // is really an array underneath can simply be cast back to one.
+        return new OrbEdgeLineStyle("custom", Array.AsReadOnly(pattern.ToArray()));
     }
 }
