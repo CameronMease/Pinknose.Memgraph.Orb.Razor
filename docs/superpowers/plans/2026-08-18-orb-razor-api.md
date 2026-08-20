@@ -2636,6 +2636,7 @@ git commit -m "feat: typed OrbGraph component with events and imperative control
 <button id="remove-btn" class="btn btn-secondary" @onclick="RemoveCarol">Remove Carol</button>
 
 <OrbGraph @ref="_graph"
+          TNode="Person" TEdge="Relationship"
           Nodes="@_people"
           Edges="@_relationships"
           Height="600px"
@@ -2644,6 +2645,9 @@ git commit -m "feat: typed OrbGraph component with events and imperative control
           OnNodeClick="@(e => _selected = e.Node)"
           OnNodeHoverEnter="@(e => _hovered = e.Node)"
           OnNodeHoverLeave="@(_ => _hovered = null)" />
+
+@* Explicit TNode/TEdge are required here: Blazor's inference from the collections
+   stops working as soon as any EventCallback is wired (CS1503). *@
 
 @code {
     private sealed record Person(string EmployeeId, string FullName, bool IsManager) : IOrbNode
