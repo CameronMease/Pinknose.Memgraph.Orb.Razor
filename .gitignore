@@ -367,3 +367,7 @@ FodyWeavers.xsd
 /memgraph-orb-*.tgz
 /package.json
 /package-lock.json
+
+# DocFX generated API metadata and rendered site
+docfx/api/
+docfx/_site/

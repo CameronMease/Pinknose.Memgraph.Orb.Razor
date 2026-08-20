@@ -38,6 +38,15 @@ jobs:
       - name: Install Chromium
         run: pwsh tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
 
+      # Reads the compiled assembly and its XML docs, so it has to follow the build. Warnings
+      # are errors here: a broken cross-reference or a type that stopped being documented is
+      # exactly what this step is for, and DocFX reports both as warnings.
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Build API documentation
+        run: dotnet docfx docfx/docfx.json --warningsAsErrors
+
       - name: Unit tests
         run: dotnet test tests/Pinknose.Memgraph.Orb.Razor.Tests --configuration Release --no-build
 

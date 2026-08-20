@@ -123,6 +123,26 @@ ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTes
 CI runs the first two suites on every push and pull request. The trimmed suite runs nightly and
 on demand (Actions → trimmed-publish → Run workflow), since each run publishes from scratch.
 
+## API documentation
+
+The public API is documented with XML comments, which ship in the package (so consumers get
+IntelliSense) and are rendered into a browsable site by [DocFX](https://dotnet.github.io/docfx/):
+
+```bash
+dotnet tool restore
+```
+
+```bash
+dotnet docfx docfx/docfx.json --serve
+```
+
+DocFX reads the **compiled assembly** rather than the source, which matters for a Razor class
+library: the component's parameters, events and methods live in `OrbGraph.razor`, and DocFX's
+source-based metadata step does not compile `.razor` files — pointed at the project it produced
+a page for `OrbGraph` with no members at all. So `docfx/docfx.json` points at
+`bin/Release/net10.0`, and the library must be built in Release first. CI builds the site on
+every push with warnings as errors, so a broken cross-reference fails the build.
+
 ## Changing the public API
 
 The public surface is recorded in `Pinknose.Memgraph.Orb.Razor/PublicAPI.Shipped.txt` and

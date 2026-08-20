@@ -1,0 +1,9 @@
+apiRules:
+  # Razor generates this onto every component to emit its markup. Reading the compiled
+  # assembly rather than the source is what surfaces it at all, and it is infrastructure
+  # rather than API anyone calls.
+  - exclude:
+      uidRegex: \.BuildRenderTree\(
+  # The generated class behind _Imports.razor. Not API, just a namespace-imports carrier.
+  - exclude:
+      uidRegex: \._Imports$
