@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net.Http;
 using System.Text;
 
@@ -116,6 +116,11 @@ public static class SampleHostFixture
     // bin/<config>/<tfm> nesting depth from the runtime working directory, which is fragile
     // across build configurations and test runners. Walk up from the test assembly's own
     // location instead, until the repo's solution file is found.
+    /// <summary>The repository root, found by walking up to the solution file.</summary>
+    // Internal rather than private: DemoSmokeTests starts its own host from a sibling project
+    // and needs the same anchor.
+    internal static string RepoRoot() => FindRepoRoot();
+
     private static string FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
