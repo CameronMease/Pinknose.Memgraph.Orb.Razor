@@ -90,7 +90,18 @@ jobs:
           name: packages
           path: artifacts/*
 
+      # A tag can arrive two ways, and both have to work. Pushed from git, no release exists
+      # yet and this creates one with generated notes. Created through the GitHub UI, the
+      # release already exists -- and `gh release create` fails on that, which would turn the
+      # job red *after* the package had already gone to nuget.org. So: create it if it is
+      # missing, otherwise just attach the packages to the one that is already there.
       - name: GitHub Release
-        run: gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg --generate-notes
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; attaching packages to it."
+            gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" artifacts/* --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
