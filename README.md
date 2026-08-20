@@ -123,6 +123,21 @@ ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTes
 CI runs the first two suites on every push and pull request. The trimmed suite runs nightly and
 on demand (Actions → trimmed-publish → Run workflow), since each run publishes from scratch.
 
+## Changing the public API
+
+The public surface is recorded in `Pinknose.Memgraph.Orb.Razor/PublicAPI.Shipped.txt` and
+`PublicAPI.Unshipped.txt`, and `Microsoft.CodeAnalysis.PublicApiAnalyzers` **fails the build**
+when the code and those files disagree. Adding a public member is an error until you record it;
+so is deleting one that is still listed.
+
+The error message contains the exact line to add, in the form
+`Namespace.Type.Member.get -> string!`. Put new entries in `PublicAPI.Unshipped.txt`; when you
+cut a release, move them into `PublicAPI.Shipped.txt`. Everything is currently unshipped,
+because nothing has been released yet.
+
+This exists because a published NuGet version can never be replaced. Without it, a rename or a
+signature change reaches a tag as easily as any other edit.
+
 ## Releasing
 
 The version is not stored in a file. [MinVer](https://github.com/adamralph/minver) derives it
