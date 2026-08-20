@@ -17,6 +17,14 @@ publish — all three are exercised by the test suite on every change. The libra
 trimmable and serializes through a source-generated context, so a WebAssembly publish trims it
 down rather than shipping it whole, and reports no trim warnings against it.
 
+> **Beta.** This is an early release. The API is likely to change, including in ways that break
+> existing code, and under `0.x` those changes arrive in minor versions rather than major ones.
+> Pin an exact version if you depend on it.
+>
+> Changes to the public surface are deliberate and recorded — the build fails if a public member
+> is added, removed or changed without updating `PublicAPI.*.txt` — so breaks show up in the diff
+> and in release notes, not silently.
+
 ## Installing
 
 ```bash
