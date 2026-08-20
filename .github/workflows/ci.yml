@@ -1,7 +1,11 @@
 name: ci
 
+# master only on push, because changes reach it through a pull request now: without the
+# branch filter a PR from a branch in this repo runs CI twice, once for the branch push and
+# once for the PR itself.
 on:
   push:
+    branches: [master]
   pull_request:
   workflow_dispatch:
 
