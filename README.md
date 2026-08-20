@@ -8,7 +8,9 @@ component driven by your own domain types instead of hand-written JS interop.
 **both Blazor Server and Blazor WebAssembly** — the sample host serves the same demo component
 under each render mode, and every browser test runs against both. A trimmed WebAssembly
 publish is covered too, by an opt-in suite (see below) that publishes with trimming on and
-drives the published app.
+drives the published app. Serialization goes through a source-generated `JsonSerializerContext`,
+so that publish produces **no trim warnings** against this library — a fact the suite asserts
+rather than assumes.
 
 ## Minimal example
 
@@ -118,11 +120,5 @@ ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTes
 
 ## Known gaps
 
-- **The trimmer reports four warnings against the library.** All four are `IL2026` on the
-  reflection-based JSON path (`OrbJsonContext`, `OrbLayoutConverter`): the trimmer cannot
-  follow it, so it cannot promise the types survive. In practice they do — the trimmed-publish
-  suite drives a real trimmed build and checks styles, labels, updates and events all still
-  work — but the warnings stay until the serializer moves to a source-generated
-  `JsonSerializerContext`.
 - **`OrbMapView` (geo layout) is not supported.** This library wraps Orb's canvas graph view
   (`OrbView`) only. Orb's map-based view is out of scope.

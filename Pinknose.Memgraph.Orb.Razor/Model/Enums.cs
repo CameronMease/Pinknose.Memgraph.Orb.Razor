@@ -2,8 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace Pinknose.Memgraph.Orb.Razor;
 
+[JsonConverter(typeof(CamelCaseEnumConverter<OrbNodeShape>))]
 public enum OrbNodeShape { Circle, Dot, Square, Diamond, Triangle, TriangleDown, Star, Hexagon }
 
+[JsonConverter(typeof(CamelCaseEnumConverter<OrbRendererType>))]
 public enum OrbRendererType
 {
     Canvas,
@@ -15,6 +17,8 @@ public enum OrbRendererType
     WebGl
 }
 
+[JsonConverter(typeof(CamelCaseEnumConverter<OrbLayoutOrientation>))]
 public enum OrbLayoutOrientation { Horizontal, Vertical }
 
+[JsonConverter(typeof(CamelCaseEnumConverter<OrbAnchor>))]
 public enum OrbAnchor { Start, Center, End }

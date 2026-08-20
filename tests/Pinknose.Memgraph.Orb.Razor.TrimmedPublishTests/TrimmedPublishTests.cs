@@ -13,21 +13,6 @@ public class TrimmedPublishTests
 {
     private const string WasmRoute = "/orb-wasm";
 
-    // Every trim warning ILLink currently reports against the library, by file. They share a
-    // root cause: OrbJson serializes reflectively (see OrbJsonContext), which the trimmer
-    // cannot follow, so it warns that the types involved might not survive. The runtime tests
-    // below are what establish that they do survive in practice.
-    //
-    // This is a baseline, not an endorsement. It exists so a NEW warning -- a new reflective
-    // call site in the library, or one reached from it -- fails this test instead of blending
-    // into known noise. Removing these four means moving to a source-generated
-    // JsonSerializerContext; until then, changing this dictionary is a deliberate act.
-    private static readonly Dictionary<string, int> ExpectedTrimWarnings = new()
-    {
-        ["OrbJsonContext.cs"] = 3,
-        ["OrbLayoutConverter.cs"] = 1
-    };
-
     private static IPlaywright _playwright = null!;
     private static IBrowser _browser = null!;
 
@@ -78,21 +63,42 @@ public class TrimmedPublishTests
         }
     }
 
+    // Guards the assertion below rather than the library. "No warnings from our code" and
+    // "the trimmer never ran" produce identical output, and the second one is easy to cause
+    // by accident: ILLink caches its results, so an incremental publish prints nothing at
+    // all. The framework's own assemblies always produce trim warnings under these publish
+    // flags, so their presence is the proof that trim analysis actually happened.
     [TestMethod]
-    public void Publish_ReportsOnlyTheKnownTrimWarningsInTheLibrary()
+    public void Publish_ActuallyRanTrimAnalysis()
     {
         TrimmedPublishFixture.RequireEnabled();
 
-        var actual = LibraryTrimWarnings(TrimmedPublishFixture.PublishOutput);
+        StringAssert.Contains(
+            TrimmedPublishFixture.PublishOutput,
+            "Trim analysis warning",
+            "the publish produced no trim analysis at all, so the warning assertion below "
+                + "would pass vacuously. The usual cause is an incremental publish reusing "
+                + "ILLink's cached results.");
+    }
 
-        CollectionAssert.AreEquivalent(
-            ExpectedTrimWarnings.ToList(),
-            actual.ToList(),
-            "ILLink's trim warnings against the library changed. Expected "
-                + $"[{Describe(ExpectedTrimWarnings)}] but the publish reported "
-                + $"[{Describe(actual)}]. A new warning means a new reflective path the "
-                + "trimmer cannot follow: confirm the runtime tests below still pass, then "
-                + "update the baseline deliberately.");
+    [TestMethod]
+    public void Publish_ReportsNoTrimWarningsInTheLibrary()
+    {
+        TrimmedPublishFixture.RequireEnabled();
+
+        var warnings = LibraryTrimWarnings(TrimmedPublishFixture.PublishOutput);
+
+        // The library serializes through a source-generated JsonSerializerContext precisely so
+        // this stays empty: the trimmer can follow generated metadata, and cannot follow the
+        // reflective resolver this replaced (which cost four IL2026 warnings). A regression
+        // here means something reintroduced a reflective path -- most likely a
+        // JsonSerializer.Serialize overload that takes a Type or bare options instead of a
+        // JsonTypeInfo.
+        Assert.IsTrue(
+            warnings.Count == 0,
+            $"the trimmer warned about the library: [{Describe(warnings)}]. Every warning here "
+                + "is a path the trimmer cannot prove safe, so the runtime tests below are the "
+                + "only thing standing between it and a silently broken trimmed build.");
     }
 
     [TestMethod]

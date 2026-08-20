@@ -5,11 +5,37 @@ using System.Text.Json.Serialization.Metadata;
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>
-/// Serialization for everything crossing to JavaScript. Only library-owned types appear
-/// here, which keeps the consumer's domain types out of the payload. This is a reflection-
-/// based (non-source-generated) approach, and WASM publish-trimming safety for this path
-/// remains unverified.
+/// Source-generated metadata for everything the component sends to JavaScript.
 /// </summary>
+// Every type listed here is library-owned: the consumer's domain types are projected into
+// these payloads first, so they never reach the serializer and never need registering.
+//
+// Source-generated rather than reflective because the component is expected to run in a
+// trimmed WebAssembly publish, where the trimmer removes members nothing statically
+// references. A reflective serializer reaches property getters only by reflection, so the
+// trimmer cannot see the need for them, cannot prove them live, and warns (IL2026) that it
+// might be removing something required. The generated resolver below is that static
+// reference: the metadata exists in compiled code the trimmer can follow.
+//
+// The naming policy and ignore condition are declared here as well as on the options built in
+// OrbJson. That is not redundant: the generator bakes property names into the generated
+// metadata at compile time using the policy from this attribute, so a policy set only on the
+// options would not rename anything.
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+[JsonSerializable(typeof(OrbGraphPayload))]
+[JsonSerializable(typeof(OrbSettings))]
+// The concrete layouts are registered individually because OrbLayoutConverter writes whichever
+// one the caller supplied by its runtime type; the abstract base alone would not give the
+// generator anything to emit.
+[JsonSerializable(typeof(OrbForceLayout))]
+[JsonSerializable(typeof(OrbGridLayout))]
+[JsonSerializable(typeof(OrbCircularLayout))]
+[JsonSerializable(typeof(OrbHierarchicalLayout))]
+internal sealed partial class OrbJsonContext : JsonSerializerContext;
+
+/// <summary>Serialization for everything crossing to JavaScript.</summary>
 internal static class OrbJson
 {
     internal static readonly JsonSerializerOptions Options = Build(includeLayoutConverter: true);
@@ -20,10 +46,17 @@ internal static class OrbJson
         Build(includeLayoutConverter: false);
 
     public static string SerializeGraph(OrbGraphPayload payload)
-        => JsonSerializer.Serialize(payload, Options);
+        => JsonSerializer.Serialize(payload, TypeInfo<OrbGraphPayload>(Options));
 
     public static string SerializeSettings(OrbSettings settings)
-        => JsonSerializer.Serialize(settings, Options);
+        => JsonSerializer.Serialize(settings, TypeInfo<OrbSettings>(Options));
+
+    /// <summary>The generated metadata for <typeparamref name="T"/>, bound to these options.</summary>
+    // Resolved through the options rather than off OrbJsonContext.Default directly, so the
+    // returned metadata carries the converters registered below. Reading it from the context's
+    // own options would silently drop them.
+    internal static JsonTypeInfo<T> TypeInfo<T>(JsonSerializerOptions options)
+        => (JsonTypeInfo<T>)options.GetTypeInfo(typeof(T));
 
     private static JsonSerializerOptions Build(bool includeLayoutConverter)
     {
@@ -31,15 +64,9 @@ internal static class OrbJson
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-
-            // .NET 8+ requires an explicit resolver before MakeReadOnly() below; without
-            // this, JsonSerializerOptions.MakeReadOnly() throws at run time even though
-            // the reflection-based (non-source-generated) approach is otherwise unchanged
-            // from the spec's documented deviation.
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+            TypeInfoResolver = OrbJsonContext.Default
         };
 
-        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
         options.Converters.Add(new OrbEdgeLineStyleConverter());
 
         if (includeLayoutConverter)
