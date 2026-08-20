@@ -44,6 +44,11 @@ unset falls back to Orb's own default rather than to nothing, so a node with a `
 `Style` still renders at Orb's default size, and setting only `Color` does not cost you the
 size. Setting `Style` back to `null` returns the node or edge to Orb's defaults entirely.
 
+`Settings` behaves the same way: supply only what you care about, and set the parameter back to
+`null` to return the whole view to Orb's defaults. (Orb's own `setSettings` merges and has no
+"unset", so the component snapshots the view's defaults before applying anything and re-applies
+that snapshot when you clear.)
+
 ## The type-argument trap (read this first)
 
 Blazor can infer `TNode`/`TEdge` from the `Nodes`/`Edges` collections **only while the
@@ -113,11 +118,6 @@ ORB_TRIM_TESTS=1 dotnet test tests/Pinknose.Memgraph.Orb.Razor.TrimmedPublishTes
 
 ## Known gaps
 
-- **`Settings` going non-null → null is currently a no-op.** Once you've supplied an
-  `OrbSettings` object, setting the parameter back to `null` on a later render does not clear
-  or reset anything already applied — the component only pushes a settings update when the new
-  value is both non-null and different from what was last sent. If you need to change
-  settings, mutate/replace the object; don't rely on nulling it out.
 - **The trimmer reports four warnings against the library.** All four are `IL2026` on the
   reflection-based JSON path (`OrbJsonContext`, `OrbLayoutConverter`): the trimmer cannot
   follow it, so it cannot promise the types survive. In practice they do — the trimmed-publish

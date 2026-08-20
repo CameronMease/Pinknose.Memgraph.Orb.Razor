@@ -198,9 +198,19 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
     await ensureScript();
     const OrbView = await resolveOrbView();
 
-    const settings = parseJson(settingsJson) ?? undefined;
-    const view = new OrbView(host, settings);
-    const handle = { view, host, dotNetRef };
+    // Built bare on purpose, then given the caller's settings a line later. Orb's
+    // setSettings() merges into whatever is already there, so once a setting has been applied
+    // there is no value that means "unset" -- clearing has to re-apply the defaults instead.
+    // Snapshotting them off a bare view is the only faithful source for those: getSettings()
+    // hands back a deep copy, and the alternative, hardcoding Orb's defaults here, would rot
+    // silently the first time Orb changed one.
+    const settings = parseJson(settingsJson);
+    const view = new OrbView(host);
+    const handle = { view, host, dotNetRef, defaultSettings: view.getSettings() };
+
+    if (settings) {
+        view.setSettings(settings);
+    }
 
     const payload = parseJson(dataJson);
     if (payload) {
@@ -250,6 +260,13 @@ export function applySettings(handle, settingsJson) {
     const settings = parseJson(settingsJson);
     if (handle && settings) {
         handle.view.setSettings(settings);
+    }
+}
+
+// Settings going back to null: re-apply the snapshot taken before anything was ever applied.
+export function resetSettings(handle) {
+    if (handle) {
+        handle.view.setSettings(handle.defaultSettings);
     }
 }
 

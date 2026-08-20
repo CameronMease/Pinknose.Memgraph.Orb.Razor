@@ -1,4 +1,4 @@
-@typeparam TNode where TNode : IOrbNode
+﻿@typeparam TNode where TNode : IOrbNode
 @typeparam TEdge where TEdge : IOrbEdge
 @using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
@@ -207,6 +207,15 @@
             {
                 await _module!.InvokeVoidAsync("applySettings", _handle, settingsJson);
                 _lastSettingsJson = settingsJson;
+            }
+            else if (settingsJson is null && _lastSettingsJson is not null)
+            {
+                // Settings dropping back to null means the caller has no opinion any more, so
+                // the graph returns to Orb's defaults -- the same thing a null Style does for
+                // a node. Leaving the last-applied settings in place instead would make null
+                // mean "no change" here and "reset" there.
+                await _module!.InvokeVoidAsync("resetSettings", _handle);
+                _lastSettingsJson = null;
             }
         }
         finally

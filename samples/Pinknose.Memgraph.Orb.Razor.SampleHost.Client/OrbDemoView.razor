@@ -13,6 +13,7 @@
 
 <button id="recenter-btn" class="btn btn-secondary" @onclick="RecenterAsync">Recenter</button>
 <button id="remove-btn" class="btn btn-secondary" @onclick="RemoveCarol">Remove Carol</button>
+<button id="clear-settings-btn" class="btn btn-secondary" @onclick="ClearSettings">Clear settings</button>
 <button id="style-toggle-btn" class="btn btn-secondary" @onclick="CycleStyling">
     Styling: @_styling.ToString().ToLowerInvariant()
 </button>
@@ -77,12 +78,18 @@
     private List<Person> _people = [];
     private List<Relationship> _relationships = [];
 
-    private readonly OrbSettings _settings = new()
+    // Fps is here purely because it is observably non-default (Orb's default is 60): it gives
+    // "Clear settings" something to visibly undo without changing how the demo looks.
+    private OrbSettings? _settings = new()
     {
-        Render = new OrbRenderSettings { LabelsIsEnabled = true, ShadowIsEnabled = true },
+        Render = new OrbRenderSettings { LabelsIsEnabled = true, ShadowIsEnabled = true, Fps = 30 },
         Interaction = new OrbInteractionSettings { IsDragEnabled = true, IsZoomEnabled = true },
         Layout = new OrbForceLayout()
     };
+
+    // Settings going non-null -> null means "I have no opinion any more", so the graph should
+    // go back to Orb's own defaults -- the same thing Style = null does for a node.
+    private void ClearSettings() => _settings = null;
 
     protected override void OnInitialized()
     {

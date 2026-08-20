@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Playwright;
 
 namespace Pinknose.Memgraph.Orb.Razor.BrowserTests;
@@ -91,6 +91,15 @@ internal sealed class OrbPageDriver(IPage page)
     public Task<string?[]> ReadLabelsAsync()
         => page.EvaluateAsync<string?[]>(
             "() => window.__orbTestView.data.getNodes().map(n => n.getLabel() ?? null)");
+
+    /// <summary>The view's live settings, as Orb reports them.</summary>
+    public async Task<JsonElement> ReadSettingsAsync()
+    {
+        var json = await page.EvaluateAsync<string>(
+            "() => JSON.stringify(window.__orbTestView.getSettings())");
+
+        return JsonDocument.Parse(json).RootElement.Clone();
+    }
 
     public async Task ClickFirstNodeAsync()
     {

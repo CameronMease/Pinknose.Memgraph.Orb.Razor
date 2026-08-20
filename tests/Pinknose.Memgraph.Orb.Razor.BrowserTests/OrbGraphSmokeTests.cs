@@ -289,6 +289,32 @@ public class OrbGraphSmokeTests
     [TestMethod]
     [DataRow(ServerRoute)]
     [DataRow(WasmRoute)]
+    public async Task ClearingSettings_RestoresOrbsDefaults(string route)
+    {
+        await GoToAsync(route);
+
+        // Orb's setSettings() merges, so there is no "unset" to send: clearing has to re-apply
+        // the defaults the view was built with. The demo runs at 30fps against Orb's default
+        // of 60 precisely so this is observable.
+        var applied = await _driver.ReadSettingsAsync();
+        Assert.AreEqual(
+            30,
+            applied.GetProperty("render").GetProperty("fps").GetDouble(),
+            "precondition: the demo's settings must be in effect before they are cleared");
+
+        await _page.ClickAsync("#clear-settings-btn");
+        await _page.WaitForTimeoutAsync(500);
+
+        var cleared = await _driver.ReadSettingsAsync();
+        Assert.AreEqual(
+            60,
+            cleared.GetProperty("render").GetProperty("fps").GetDouble(),
+            "Settings going back to null must return the graph to Orb's defaults");
+    }
+
+    [TestMethod]
+    [DataRow(ServerRoute)]
+    [DataRow(WasmRoute)]
     public async Task NavigatingAway_DisposesWithoutError(string route)
     {
         await GoToAsync(route);
