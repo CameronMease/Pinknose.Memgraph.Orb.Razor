@@ -22,14 +22,14 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Load-bearing. MinVer derives the version from tags and history, and the default
           # shallow checkout has neither -- which would silently produce a pre-release package
           # on a release tag rather than failing.
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
