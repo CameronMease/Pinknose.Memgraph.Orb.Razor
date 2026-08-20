@@ -142,6 +142,25 @@ Three usage tiers, no API change between them:
 3. **Implement the interface on your own type** — existing collections go straight in,
    nothing allocated to adapt them.
 
+### Type-argument inference (measured, 2026-08-20)
+
+Blazor infers `TNode`/`TEdge` from the collections **only while no event callback is
+wired**. Attaching any `EventCallback` parameter — lambda or method group — fails to
+compile with `CS1503`, because the callback's own type argument depends on the inference
+that is still in progress:
+
+```razor
+<OrbGraph Nodes="@people" Edges="@links" />                        <!-- compiles -->
+<OrbGraph Nodes="@people" OnNodeClick="Handle" />                  <!-- CS1503 -->
+<OrbGraph TNode="Person" TEdge="Friendship"
+          Nodes="@people" OnNodeClick="Handle" />                  <!-- compiles -->
+```
+
+Since events are the usual reason to reach for this component, **most real usage carries
+explicit `TNode`/`TEdge`**. An earlier draft of this document claimed the type arguments
+were normally unnecessary; that was wrong and is corrected here. Document the explicit
+form as the default in the README.
+
 ### 3.3 Event arguments
 
 ```csharp
@@ -353,7 +372,8 @@ Serialized as camelCase strings to match Orb (`TriangleDown` → `"triangleDown"
 ### 3.7 Usage
 
 ```razor
-<OrbGraph Nodes="@people" Edges="@friendships"
+<OrbGraph TNode="Person" TEdge="Friendship"
+          Nodes="@people" Edges="@friendships"
           Height="600px"
           class="border rounded"
           Settings="@(new OrbSettings { Layout = new OrbForceLayout() })"
