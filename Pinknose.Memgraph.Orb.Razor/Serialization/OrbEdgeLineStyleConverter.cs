@@ -13,7 +13,7 @@ internal sealed class OrbEdgeLineStyleConverter : JsonConverter<OrbEdgeLineStyle
         writer.WriteStartObject();
         writer.WriteString("type", value.Kind);
 
-        if (value.Pattern is { Length: > 0 })
+        if (value.Pattern is { Count: > 0 })
         {
             writer.WritePropertyName("pattern");
             writer.WriteStartArray();

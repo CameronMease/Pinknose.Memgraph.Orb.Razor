@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Pinknose.Memgraph.Orb.Razor.Tests.Model;
@@ -38,13 +38,38 @@ public class OrbStyleTests
         var custom = OrbEdgeLineStyle.Custom(4, 2, 1);
 
         Assert.AreEqual("custom", custom.Kind);
-        CollectionAssert.AreEqual(new double[] { 4, 2, 1 }, custom.Pattern);
+        CollectionAssert.AreEqual(new double[] { 4, 2, 1 }, custom.Pattern!.ToArray());
     }
 
     [TestMethod]
     public void LineStyle_CustomRejectsEmptyPattern()
     {
         Assert.ThrowsExactly<ArgumentException>(() => OrbEdgeLineStyle.Custom());
+    }
+
+    [TestMethod]
+    public void Custom_DoesNotKeepTheCallersArray()
+    {
+        // The caller owns the array they passed; if the style holds onto it, their later edit
+        // silently repaints an edge that was configured long ago -- and Custom looks immutable,
+        // so nothing about the API suggests that could happen.
+        var pattern = new double[] { 4, 2 };
+
+        var style = OrbEdgeLineStyle.Custom(pattern);
+        pattern[0] = 99;
+
+        Assert.AreEqual(4d, style.Pattern![0]);
+    }
+
+    [TestMethod]
+    public void Custom_DoesNotHandOutAMutableArray()
+    {
+        var style = OrbEdgeLineStyle.Custom(4, 2);
+
+        // Reading the pattern must not be a way to edit it either.
+        Assert.IsNotInstanceOfType<double[]>(
+            style.Pattern,
+            "Pattern hands back the live array, so a caller can rewrite the dash pattern in place");
     }
 
     [TestMethod]

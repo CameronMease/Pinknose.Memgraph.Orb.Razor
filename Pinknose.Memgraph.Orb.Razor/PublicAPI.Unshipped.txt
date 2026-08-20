@@ -46,7 +46,7 @@ Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.LocalPoint.init -> void
 Pinknose.Memgraph.Orb.Razor.OrbEdgeEventArgs<TEdge>.OrbEdgeEventArgs() -> void
 Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle
 Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Kind.get -> string!
-Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Pattern.get -> double[]?
+Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Pattern.get -> System.Collections.Generic.IReadOnlyList<double>?
 Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle
 Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ArrowSize.get -> double?
 Pinknose.Memgraph.Orb.Razor.OrbEdgeStyle.ArrowSize.set -> void
