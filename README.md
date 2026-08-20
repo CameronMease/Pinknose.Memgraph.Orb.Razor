@@ -1,13 +1,16 @@
-# Pinknose.Memgraph.Orb.Razor
+# Memgraph Orb Graph Visualization Library for Blazor/.NET
 
 [![ci](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/ci.yml/badge.svg)](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/ci.yml)
 [![docs](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/docs.yml/badge.svg)](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/docs.yml)
 
 📖 **[API documentation](https://cameronmease.github.io/Pinknose.Memgraph.Orb.Razor/)**
 
-A Blazor component library wrapping [`@memgraph/orb`](https://github.com/memgraph/orb) 1.0.2,
-the force-directed graph visualization library from Memgraph. It gives you a typed `<OrbGraph>`
-component driven by your own domain types instead of hand-written JS interop.
+**`Pinknose.Memgraph.Orb.Razor`** — an independent Blazor wrapper for
+[`@memgraph/orb`](https://github.com/memgraph/orb) 1.0.2, not affiliated with Memgraph.
+
+Drive a force-directed graph from your own domain types through a typed `<OrbGraph>` component,
+with no hand-written JS interop: implement two small interfaces on the types you already have,
+and node and edge events hand those same instances back to you.
 
 Runs under **Blazor Server** and **Blazor WebAssembly**, including a trimmed WebAssembly
 publish — all three are exercised by the test suite on every change. The library is marked
