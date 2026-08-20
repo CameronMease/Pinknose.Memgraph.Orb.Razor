@@ -61,3 +61,15 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# Vendored third-party bundles
+#
+# wwwroot/orbGraph.js loads orb.min.js with a Subresource Integrity hash, so the
+# browser refuses to execute the bundle if even one byte differs. Under the
+# `* text=auto` rule above, a Windows clone (core.autocrlf=true) rewrites the
+# bundle's sole LF to CRLF on checkout, which breaks that hash and leaves the
+# graph silently unrendered. These files must be checked out byte-for-byte as
+# they were vendored.
+###############################################################################
+Pinknose.Memgraph.Orb.Razor/wwwroot/vendor/** binary
