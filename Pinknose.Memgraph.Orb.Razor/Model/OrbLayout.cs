@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>Base for Orb's layout union. Serializes to <c>{ type, options }</c>.</summary>
@@ -18,12 +20,18 @@ public sealed class OrbForceLayout : OrbLayout
     public bool? IsSimulatingOnDataUpdate { get; set; }
     public bool? IsSimulatingOnSettingsUpdate { get; set; }
     public bool? IsSimulatingOnUnstick { get; set; }
+
+    // Orb's key is "useGPU". CamelCase would render UseGpu as "useGpu" (it lowercases only
+    // the leading uppercase run), so the wire name is pinned.
+    [JsonPropertyName("useGPU")]
     public bool? UseGpu { get; set; }
+
     public OrbForceLinks? Links { get; set; }
     public OrbForceManyBody? ManyBody { get; set; }
     public OrbForceCollision? Collision { get; set; }
     public OrbForceAlpha? Alpha { get; set; }
     public OrbForceCentering? Centering { get; set; }
+    public OrbForcePositioning? Positioning { get; set; }
 }
 
 public sealed class OrbGridLayout : OrbLayout
@@ -67,6 +75,7 @@ public sealed class OrbForceManyBody
     public double? Theta { get; set; }
     public double? DistanceMin { get; set; }
     public double? DistanceMax { get; set; }
+    public bool? EdgeMidpointRepulsion { get; set; }
 }
 
 public sealed class OrbForceCollision
@@ -87,6 +96,25 @@ public sealed class OrbForceAlpha
 public sealed class OrbForceCentering
 {
     public double? X { get; set; }
+    public double? Y { get; set; }
+    public double? Strength { get; set; }
+}
+
+/// <summary>Mirrors Orb's <c>IForceLayoutPositioning</c> — per-axis pinning forces.</summary>
+public sealed class OrbForcePositioning
+{
+    public OrbForceXPosition? ForceX { get; set; }
+    public OrbForceYPosition? ForceY { get; set; }
+}
+
+public sealed class OrbForceXPosition
+{
+    public double? X { get; set; }
+    public double? Strength { get; set; }
+}
+
+public sealed class OrbForceYPosition
+{
     public double? Y { get; set; }
     public double? Strength { get; set; }
 }

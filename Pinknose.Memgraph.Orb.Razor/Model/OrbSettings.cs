@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Pinknose.Memgraph.Orb.Razor;
 
 /// <summary>Mirrors Orb's <c>IOrbViewSettingsInit</c>. Null members fall back to Orb's defaults.</summary>
@@ -5,7 +7,13 @@ public sealed class OrbSettings
 {
     public OrbRenderSettings? Render { get; set; }
     public OrbInteractionSettings? Interaction { get; set; }
+
+    // Orb's key is "strategy"; we expose it as Selection because that is what it controls.
+    // Without this attribute the property would serialize as "selection" and Orb would
+    // silently ignore every selection setting.
+    [JsonPropertyName("strategy")]
     public OrbSelectionSettings? Selection { get; set; }
+
     public OrbLayout? Layout { get; set; }
     public int? ZoomFitTransitionMs { get; set; }
     public bool? IsOutOfBoundsDragEnabled { get; set; }

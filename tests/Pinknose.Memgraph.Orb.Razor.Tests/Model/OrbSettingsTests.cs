@@ -46,4 +46,23 @@ public class OrbSettingsTests
         Assert.AreEqual(120d, layout.Links!.Distance);
         Assert.AreEqual(-50d, layout.ManyBody!.Strength);
     }
+
+    [TestMethod]
+    public void ForceLayout_ExposesPositioningAndRepulsion()
+    {
+        var layout = new OrbForceLayout
+        {
+            UseGpu = true,
+            Positioning = new OrbForcePositioning
+            {
+                ForceX = new OrbForceXPosition { X = 0, Strength = 0.1 },
+                ForceY = new OrbForceYPosition { Y = 0, Strength = 0.2 }
+            },
+            ManyBody = new OrbForceManyBody { EdgeMidpointRepulsion = true }
+        };
+
+        Assert.AreEqual(0d, layout.Positioning!.ForceX!.X);
+        Assert.AreEqual(0.2d, layout.Positioning.ForceY!.Strength);
+        Assert.IsTrue(layout.ManyBody!.EdgeMidpointRepulsion);
+    }
 }
