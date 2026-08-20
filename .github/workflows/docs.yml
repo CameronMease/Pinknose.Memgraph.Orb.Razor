@@ -43,11 +43,36 @@ jobs:
       - name: Build library
         run: dotnet build Pinknose.Memgraph.Orb.Razor --configuration Release
 
+      # Publishing the WebAssembly demo relinks the runtime through emscripten, which this
+      # workload provides. The fast CI job does not need it -- a plain build does not relink
+      # -- but a publish does.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
       - name: Restore .NET tools
         run: dotnet tool restore
 
       - name: Build site
         run: dotnet docfx docfx/docfx.json --warningsAsErrors
+
+      # Standalone WebAssembly, so it publishes to plain files. Blazor Server could not be
+      # hosted here at all: Pages has no host process and no place for a SignalR circuit.
+      - name: Publish demo
+        run: dotnet publish samples/Pinknose.Memgraph.Orb.Razor.Demo --configuration Release --output demo-publish
+
+      - name: Fold the demo into the site
+        run: |
+          cp -r demo-publish/wwwroot docfx/_site/demo
+
+          # Pages serves this from a sub-path. The source keeps "/" so dotnet run works
+          # locally, so it is rewritten here. Getting this wrong is a blank page with 404s
+          # in the console, not a failed build, which is why the next line checks it landed.
+          sed -i 's|<base href="/" />|<base href="/Pinknose.Memgraph.Orb.Razor/demo/" />|' docfx/_site/demo/index.html
+          grep -q '<base href="/Pinknose.Memgraph.Orb.Razor/demo/" />' docfx/_site/demo/index.html
+
+          # Without this, Pages runs Jekyll, which skips directories beginning with an
+          # underscore -- _framework and _content, which is everything the app needs.
+          touch docfx/_site/.nojekyll
 
       - uses: actions/upload-pages-artifact@v5
         with:

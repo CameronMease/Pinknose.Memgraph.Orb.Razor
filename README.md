@@ -3,6 +3,7 @@
 [![ci](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/ci.yml/badge.svg)](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/ci.yml)
 [![docs](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/docs.yml/badge.svg)](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/docs.yml)
 
+▶️ **[Live demo](https://cameronmease.github.io/Pinknose.Memgraph.Orb.Razor/demo/)** ·
 📖 **[API documentation](https://cameronmease.github.io/Pinknose.Memgraph.Orb.Razor/)**
 
 **`Pinknose.Memgraph.Orb.Razor`** — an independent Blazor wrapper for

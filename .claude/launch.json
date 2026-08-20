@@ -24,6 +24,18 @@
         "8088"
       ],
       "port": 8088
+    },
+    {
+      "name": "demo",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "samples/Pinknose.Memgraph.Orb.Razor.Demo/Pinknose.Memgraph.Orb.Razor.Demo.csproj",
+        "--urls",
+        "http://localhost:5080"
+      ],
+      "port": 5080
     }
   ]
 }
