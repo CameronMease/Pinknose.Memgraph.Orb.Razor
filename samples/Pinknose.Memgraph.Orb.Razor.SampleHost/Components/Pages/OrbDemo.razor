@@ -5,38 +5,77 @@
 
 <h1>Orb Demo</h1>
 
-<p>Sample rendering of <code>Pinknose.Memgraph.Orb.Razor.OrbGraph</code>.</p>
+<p>
+    Selected: <strong id="selection-label">@(_selected?.FullName ?? "none")</strong> |
+    Hovered: <strong id="hover-label">@(_hovered?.FullName ?? "none")</strong>
+</p>
 
-<OrbGraph Height="600px" DataJson="@DemoDataJson" SettingsJson="@DemoSettingsJson" />
+<button id="recenter-btn" class="btn btn-secondary" @onclick="RecenterAsync">Recenter</button>
+<button id="remove-btn" class="btn btn-secondary" @onclick="RemoveCarol">Remove Carol</button>
+
+<OrbGraph TNode="Person" TEdge="Relationship"
+          @ref="_graph"
+          Nodes="@_people"
+          Edges="@_relationships"
+          Height="600px"
+          class="border rounded"
+          Settings="@_settings"
+          OnNodeClick="@(e => _selected = e.Node)"
+          OnNodeHoverEnter="@(e => _hovered = e.Node)"
+          OnNodeHoverLeave="@(_ => _hovered = null)" />
 
 @code {
-    private const string DemoDataJson = """
-{
-  "nodes": [
-    { "id": "n1", "label": "Alice" },
-    { "id": "n2", "label": "Bob" },
-    { "id": "n3", "label": "Carol" }
-  ],
-  "edges": [
-    { "id": "e1", "start": "n1", "end": "n2", "label": "KNOWS" },
-    { "id": "e2", "start": "n2", "end": "n3", "label": "WORKS_WITH" }
-  ]
-}
-""";
+    private sealed record Person(string EmployeeId, string FullName, bool IsManager) : IOrbNode
+    {
+        public string Id => EmployeeId;
+        public string? Label => FullName;
+        public OrbNodeStyle? Style => new()
+        {
+            Color = IsManager ? "#cc3333" : "#3399cc",
+            Size = IsManager ? 12 : 8
+        };
+    }
 
-    private const string DemoSettingsJson = """
-{
-  "render": {
-    "labelsIsEnabled": true,
-    "shadowIsEnabled": true
-  },
-  "interaction": {
-    "isDragEnabled": true,
-    "isZoomEnabled": true
-  },
-  "layout": {
-    "type": "force"
-  }
-}
-""";
+    private sealed record Relationship(string Id, string Start, string End, string Kind) : IOrbEdge
+    {
+        public string? Label => Kind;
+    }
+
+    private OrbGraph<Person, Relationship>? _graph;
+    private Person? _selected;
+    private Person? _hovered;
+
+    private List<Person> _people =
+    [
+        new("n1", "Alice", true),
+        new("n2", "Bob", false),
+        new("n3", "Carol", false)
+    ];
+
+    private List<Relationship> _relationships =
+    [
+        new("e1", "n1", "n2", "KNOWS"),
+        new("e2", "n2", "n3", "WORKS_WITH")
+    ];
+
+    private readonly OrbSettings _settings = new()
+    {
+        Render = new OrbRenderSettings { LabelsIsEnabled = true, ShadowIsEnabled = true },
+        Interaction = new OrbInteractionSettings { IsDragEnabled = true, IsZoomEnabled = true },
+        Layout = new OrbForceLayout()
+    };
+
+    private async Task RecenterAsync()
+    {
+        if (_graph is not null)
+        {
+            await _graph.RecenterAsync();
+        }
+    }
+
+    private void RemoveCarol()
+    {
+        _people = [.. _people.Where(p => p.Id != "n3")];
+        _relationships = [.. _relationships.Where(r => r.Start != "n3" && r.End != "n3")];
+    }
 }
