@@ -28,6 +28,16 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
+  <PropertyGroup Label="Trimming">
+    <!-- Permission for a consumer's trimmer, not a target choice: WebAssembly apps publish
+         trimmed, and an assembly not marked trimmable is copied through whole, so their users
+         download every member of this library whether they reach it or not. Marking it also
+         turns on the trim analyzer for this project, which surfaces reflection the trimmer
+         cannot follow at build time instead of inside someone else's publish.
+         Blazor Server consumers are unaffected; nothing trims their copy. -->
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+
   <PropertyGroup Label="Versioning">
     <!-- The git tag IS the version: MinVer reads the nearest v-prefixed tag, and any commit
          that is not exactly on one packs as a pre-release. NuGet versions are immutable, so a

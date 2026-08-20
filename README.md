@@ -8,7 +8,8 @@ component driven by your own domain types instead of hand-written JS interop.
 **both Blazor Server and Blazor WebAssembly** — the sample host serves the same demo component
 under each render mode, and every browser test runs against both. A trimmed WebAssembly
 publish is covered too, by an opt-in suite (see below) that publishes with trimming on and
-drives the published app. Serialization goes through a source-generated `JsonSerializerContext`,
+drives the published app. The library is marked `IsTrimmable`, so a WebAssembly consumer's
+publish strips what their app does not use out of it rather than shipping it whole. Serialization goes through a source-generated `JsonSerializerContext`,
 so that publish produces **no trim warnings** against this library — a fact the suite asserts
 rather than assumes.
 
