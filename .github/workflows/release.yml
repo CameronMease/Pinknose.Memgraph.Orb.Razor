@@ -2,10 +2,7 @@ name: release
 
 # Pushing a v-prefixed tag is the single act that releases. There is no version to bump
 # anywhere first: MinVer reads this tag and the package version follows from it.
-#
-# The NuGet upload is currently commented out (see below), so a tag exercises the whole chain
-# -- tests, pack, version-matches-tag, artifacts, GitHub Release -- without publishing
-# anything publicly.
+
 on:
   push:
     tags:
@@ -59,20 +56,16 @@ jobs:
             exit 1
           fi
 
-      # DISABLED until we are ready to go public. Publishing to nuget.org is irreversible --
-      # a version can be unlisted but never replaced or deleted -- so it stays off while the
-      # rest of this workflow is being exercised. Everything above and below still runs, so a
-      # tag proves the whole chain except the upload itself.
-      #
-      # To enable: uncomment, and add a NUGET_API_KEY repository secret first (without it the
-      # step fails and nothing is published, but the tag and artifacts are unaffected).
-      #
-      # - name: Push to NuGet
-      #   run: >
-      #     dotnet nuget push "artifacts/*.nupkg"
-      #     --api-key ${{ secrets.NUGET_API_KEY }}
-      #     --source https://api.nuget.org/v3/index.json
-      #     --skip-duplicate
+      # Irreversible: a version pushed to nuget.org can be unlisted, but never replaced or
+      # deleted. The version-matches-tag check above is the last gate before that becomes
+      # permanent. Needs a NUGET_API_KEY repository secret; without it this step fails and
+      # nothing is published, leaving the tag and the packed artifacts intact.
+      - name: Push to NuGet
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key ${{ secrets.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
 
       - uses: actions/upload-artifact@v4
         with:

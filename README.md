@@ -19,16 +19,12 @@ down rather than shipping it whole, and reports no trim warnings against it.
 
 ## Installing
 
-**Not published to NuGet yet.** The package builds, is versioned, and is tested end to end, but
-the publish step is deliberately switched off — see
-[Releasing](CONTRIBUTING.md#releasing). Until it is published, consume it by project reference:
-
-```xml
-<ProjectReference Include="../Pinknose.Memgraph.Orb.Razor/Pinknose.Memgraph.Orb.Razor.csproj" />
+```bash
+dotnet add package Pinknose.Memgraph.Orb.Razor
 ```
 
 Targets .NET 10, and needs a Blazor app with an interactive render mode — Server or WebAssembly,
-both supported.
+both supported. No script tag or JS setup: the component brings its own assets.
 
 ## Minimal example
 
