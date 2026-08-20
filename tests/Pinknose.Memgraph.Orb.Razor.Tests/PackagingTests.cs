@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml.Linq;
 
@@ -79,9 +79,13 @@ public class PackagingTests
         Assert.AreEqual("README.md", Metadata("readme"));
     }
 
+    // The nuspec's own copy of these is what nuget.org displays and what a consumer sees in
+    // their package details; LICENSE.txt in the repo does not travel with the assembly.
     [TestMethod]
     [DataRow("id", "Pinknose.Memgraph.Orb.Razor")]
     [DataRow("license", "MIT")]
+    [DataRow("authors", "Cameron Mease")]
+    [DataRow("copyright", "Copyright (c) 2026 Cameron Mease")]
     public void Package_DeclaresIts(string element, string expected)
     {
         Assert.AreEqual(expected, Metadata(element));

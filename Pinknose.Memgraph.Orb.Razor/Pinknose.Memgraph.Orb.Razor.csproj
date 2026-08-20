@@ -9,6 +9,9 @@
   <PropertyGroup Label="Package">
     <PackageId>Pinknose.Memgraph.Orb.Razor</PackageId>
     <Authors>Cameron Mease</Authors>
+    <!-- Kept in step with LICENSE.txt by hand. The year is first publication, not the current
+         year, so this does not roll over on its own. -->
+    <Copyright>Copyright (c) 2026 Cameron Mease</Copyright>
     <Description>A Blazor component library wrapping Memgraph's Orb graph visualization library (@memgraph/orb 1.0.2). Renders a force-directed graph from your own domain types through a typed OrbGraph component, with no hand-written JS interop. Verified under both Blazor Server and WebAssembly, including a trimmed publish.</Description>
     <PackageTags>blazor;graph;visualization;memgraph;orb;force-directed;network;razor-class-library</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
