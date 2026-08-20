@@ -6,6 +6,13 @@ namespace Pinknose.Memgraph.Orb.Razor;
 public abstract class OrbLayout
 {
     /// <summary>The discriminator Orb expects in <c>layout.type</c>.</summary>
+    /// <remarks>
+    /// Ignored during serialization: <see cref="OrbLayoutConverter"/> already writes this
+    /// value into the outer <c>type</c> key. Without <see cref="JsonIgnoreAttribute"/>,
+    /// reflection-based serialization would also emit it as a redundant <c>layoutType</c>
+    /// key inside <c>options</c>, which Orb does not expect.
+    /// </remarks>
+    [JsonIgnore]
     public abstract string LayoutType { get; }
 
     public OrbAnchor? AnchorX { get; set; }
@@ -14,6 +21,7 @@ public abstract class OrbLayout
 
 public sealed class OrbForceLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "force";
 
     public bool? IsPhysicsEnabled { get; set; }
@@ -36,6 +44,7 @@ public sealed class OrbForceLayout : OrbLayout
 
 public sealed class OrbGridLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "grid";
 
     public double? RowGap { get; set; }
@@ -44,6 +53,7 @@ public sealed class OrbGridLayout : OrbLayout
 
 public sealed class OrbCircularLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "circular";
 
     public double? Radius { get; set; }
@@ -53,6 +63,7 @@ public sealed class OrbCircularLayout : OrbLayout
 
 public sealed class OrbHierarchicalLayout : OrbLayout
 {
+    [JsonIgnore]
     public override string LayoutType => "hierarchical";
 
     public double? NodeGap { get; set; }
