@@ -1,5 +1,10 @@
 # Pinknose.Memgraph.Orb.Razor
 
+[![ci](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/ci.yml/badge.svg)](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/ci.yml)
+[![docs](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/docs.yml/badge.svg)](https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor/actions/workflows/docs.yml)
+
+📖 **[API documentation](https://cameronmease.github.io/Pinknose.Memgraph.Orb.Razor/)**
+
 A Blazor component library wrapping [`@memgraph/orb`](https://github.com/memgraph/orb) 1.0.2,
 the force-directed graph visualization library from Memgraph. It gives you a typed `<OrbGraph>`
 component driven by your own domain types instead of hand-written JS interop.
@@ -12,6 +17,19 @@ drives the published app. The library is marked `IsTrimmable`, so a WebAssembly 
 publish strips what their app does not use out of it rather than shipping it whole. Serialization goes through a source-generated `JsonSerializerContext`,
 so that publish produces **no trim warnings** against this library — a fact the suite asserts
 rather than assumes.
+
+## Installing
+
+**Not published to NuGet yet.** The package builds, is versioned, and is tested end to end, but
+the publish step is deliberately switched off — see [Releasing](#releasing). Until it is
+published, consume it by project reference:
+
+```xml
+<ProjectReference Include="../Pinknose.Memgraph.Orb.Razor/Pinknose.Memgraph.Orb.Razor.csproj" />
+```
+
+Targets .NET 10, and needs a Blazor app with an interactive render mode — Server or WebAssembly,
+both supported.
 
 ## Minimal example
 
@@ -142,7 +160,9 @@ source-based metadata step does not compile `.razor` files — pointed at the pr
 a page for `OrbGraph` with no members at all. So `docfx/docfx.json` points at
 `bin/Release/net10.0`, and the library must be built in Release first. CI builds the site on
 every push with warnings as errors, so a broken cross-reference fails the build, and the
-`docs` workflow publishes it to GitHub Pages on every push to `master`.
+`docs` workflow publishes it to
+[GitHub Pages](https://cameronmease.github.io/Pinknose.Memgraph.Orb.Razor/) on every push to
+`master`.
 
 ## Changing the public API
 
