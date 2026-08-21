@@ -1,9 +1,32 @@
 # Pinknose.Memgraph.Orb.Razor — Incremental Updates and Node Positions
 
 **Date:** 2026-08-21
+**Revision:** B
 **Status:** Approved design, ready for implementation planning
 **Scope:** Two changes to the wrapper — sending only what changed on an update, and exposing Orb's
 node positioning. One is internal; one moves the public API.
+
+**Revision B, 2026-08-21.** Revision A deferred the `getPosition` view-settings hook as "building for
+a consumer that has not asked", and made `setNodePositions` the positioning mechanism. **That had the
+two the wrong way round.** Reading `OrbView`'s graph settings shows `getPosition` is not a convenience
+over `setNodePositions` — it is the only route by which a position reaches the *simulator*:
+
+```js
+onMergeData: (data) => {
+    const nodeFilter = (node) => nodeIds.has(node.getId());
+    this._assignPositions(this._graph.getNodes(nodeFilter));       // consults getPosition
+    const nodePositions = this._graph.getNodePositions(nodeFilter);
+    this._simulator.mergeData({ nodes: nodePositions, edges: edgePositions });
+}
+```
+
+`_assignPositions` runs over the newly merged nodes, and the positions it writes are then read back
+and handed to `simulator.mergeData`. `onSetupData` does the same for the whole graph. So a position
+supplied through `getPosition` **seeds the node into the simulation at that coordinate**, whereas
+`setNodePositions` called afterwards writes only the rendered position and is overwritten the next
+time the simulator reports.
+
+`getPosition` is therefore in scope and is the primary mechanism. Section 4 is rewritten below.
 
 ---
 
@@ -54,7 +77,12 @@ export interface IOrbViewSettings<N, E> {
 }
 ```
 
-`OrbView._assignPositions` consults it for every node whenever positions are assigned.
+`OrbView._assignPositions` consults it for every node whenever positions are assigned — and the
+graph settings `OrbView` installs make that the moment positions reach the simulator. `onSetupData`
+assigns over the whole graph then calls `simulator.setupData(getNodePositions())`; `onMergeData`
+assigns over **only the newly merged nodes** (via a `nodeFilter` on their ids) then calls
+`simulator.mergeData(getNodePositions(nodeFilter))`. So `getPosition` decides where a node *enters*
+the simulation, and it is the only public route that does.
 
 **Neither route sets sticky coordinates.** `Graph.setNodePositions` and `OrbView._assignPositions`
 both call `node.setPosition(...)`, which writes the node's rendered `_position`:
@@ -148,73 +176,103 @@ None. `OrbGraphDiff` is internal and `PublicAPI.Unshipped.txt` does not move.
 
 ## 4. Change 2 — node positions
 
-### What is exposed
+Two mechanisms, doing genuinely different jobs. Conflating them is the main way this feature can be
+got wrong, so the distinction leads.
+
+| | Reaches the simulator? | When it applies | Survives a tick? |
+|---|---|---|---|
+| `getPosition` (view setting) | **Yes** — via `simulator.setupData`/`mergeData` | when a node is set up or merged | it *is* where the node starts |
+| `setNodePositions` (graph) | No — writes the rendered position only | whenever called | no, while physics runs |
+
+### The position map — `getPosition`
+
+`getPosition` is a JavaScript callback, so it cannot be a C# delegate: a per-node interop round trip
+during layout would be unusable. Instead the wrapper keeps a **position map on the JS side** and
+installs a closure over it once, at view construction:
+
+```js
+// in the handle, created before the view
+handle.positions = new Map();
+
+const view = new Orb.OrbView(container, {
+    ...settings,
+    getPosition: (node) => handle.positions.get(String(node.getId())),
+});
+```
+
+C# pushes into that map; Orb reads from it on every setup and merge, with no interop during layout.
 
 ```csharp
-public readonly record struct OrbNodePosition(string Id, double? X, double? Y);
+public readonly record struct OrbNodePosition(string Id, double X, double Y);
 
 // on OrbGraph<TNode, TEdge>
+public ValueTask SetSeedPositionsAsync(IEnumerable<OrbNodePosition> positions);
+public ValueTask ClearSeedPositionsAsync();
+```
+
+`SetSeedPositionsAsync` merges into the map rather than replacing it, so a caller can seed newly
+arriving nodes without restating the ones already placed — which is the accumulating case that
+prompted this work.
+
+**Naming.** `Seed` rather than `Set`, because that is what it does: it decides where a node *enters*
+the simulation. A name suggesting the position is then held would mislead, since physics moves it
+immediately afterwards.
+
+### Repositioning existing nodes — `setNodePositions`
+
+```csharp
 public ValueTask SetNodePositionsAsync(IEnumerable<OrbNodePosition> positions);
 public ValueTask ClearNodePositionsAsync();
 ```
 
-Batch rather than single, matching `IGraph.setNodePositions` and costing one interop call for any
-number of nodes rather than one per node.
+Batch, matching `IGraph.setNodePositions`, one interop call for any number of nodes.
 
-### The physics caveat
+**The physics caveat, which must be documented prominently or it will be reported as a bug.** This
+writes the rendered position, not sticky coordinates, so a position set while the simulation is
+running is expected to be overwritten as soon as the simulator next reports.
 
-**This must be documented prominently or it will be reported as a bug.**
+*(Inference, not measured: the mechanism is read from source, the behaviour has not been observed.
+The implementation plan confirms it first, because the documentation's shape depends on the answer.)*
 
-`setNodePositions` sets the *rendered* position, not sticky coordinates. A position set while the
-force simulation is running is therefore expected to be overwritten as soon as the simulator next
-writes positions back.
+It is durable when the simulation is not running — `OrbForceLayout` with `IsPhysicsEnabled = false`,
+or a static layout. That is the supported use: **a caller placing nodes deliberately turns physics
+off and places them.** A caller who wants to influence a running force layout wants `getPosition`.
 
-*(Inference, not yet measured: the mechanism above is read from source, but the resulting behaviour
-has not been observed. The implementation plan must begin by confirming it, because the whole
-shape of the documentation depends on which way it goes.)*
+### What is still not exposed
 
-Positions are expected to be durable when the simulation is not running — `OrbForceLayout` with
-`IsPhysicsEnabled = false`, or one of the static layouts. That combination is the supported use:
-**a caller who wants to place nodes deliberately turns physics off and places them.**
+**Per-node fix and release.** Not reachable through `OrbView` (section 2): its `fixNodes`/
+`releaseNodes` take no arguments and `_simulator` is private. Seeding a position is not the same as
+pinning one — a seeded node starts where it was told and is then moved by physics like any other.
 
-### What is deliberately not exposed
-
-**Per-node fix and release.** Not reachable through `OrbView` (section 2). Exposing it would mean an
-upstream change to Orb — either widening `OrbView.fixNodes`/`releaseNodes` to take ids, or surfacing
-the simulator.
-
-This is worth recording as a **known gap** rather than passing over, because it is the capability a
-consumer is most likely to want: pinning a few meaningful nodes and letting physics arrange the rest
-around them is exactly what `IStickyNode` is documented to enable, and the wrapper cannot offer it.
-The honest answer to a consumer asking for it is "Orb does not expose it, and here is the upstream
+Recorded as a **known gap**, because it is the capability a consumer is most likely to want next:
+holding a few meaningful nodes still while physics arranges the rest around them is exactly what
+Orb's own `IStickyNode` is documented to enable, and no consumer of `OrbView` can reach it. Closing
+it means an upstream change — widening `OrbView.fixNodes`/`releaseNodes` to take ids, or exposing the
+simulator. The honest answer to a consumer asking is "Orb does not expose it, here is the upstream
 issue", not silence.
-
-### The `getPosition` hook — deferred
-
-`IOrbViewSettings.getPosition` would let supplied positions survive a `merge()` that adds nodes,
-since it is consulted whenever positions are assigned. It is a JavaScript callback, so exposing it
-means holding a position map on the JS side rather than passing a C# delegate.
-
-Deferred, not rejected. Nothing in this change forecloses it, and it is the right mechanism if
-"positions that persist across updates" is ever asked for. Adding it now would be building for a
-consumer that has not asked.
 
 ### Public API impact
 
-`OrbNodePosition`, `SetNodePositionsAsync` and `ClearNodePositionsAsync` are added to
-`PublicAPI.Unshipped.txt`. The package is beta and its README states the API is likely to change, so
-this needs release notes rather than a compatibility strategy.
+`OrbNodePosition`, `SetSeedPositionsAsync`, `ClearSeedPositionsAsync`, `SetNodePositionsAsync` and
+`ClearNodePositionsAsync` are added to `PublicAPI.Unshipped.txt`. The package is beta and its README
+states the API is likely to change, so this needs release notes rather than a compatibility strategy.
 
 ### Tests
 
+- A seed batch reaches the JS position map, and `getPosition` returns those coordinates for the
+  matching ids and `undefined` for others.
+- Seeding merges rather than replaces: seeding `b` after `a` leaves `a` still seeded.
+- **A node merged after its seed was set enters the simulation at that coordinate** — the test that
+  makes this feature worth having, and the one that distinguishes it from `setNodePositions`.
+- `ClearSeedPositionsAsync` empties the map, and `getPosition` then returns `undefined` for
+  everything.
 - A position batch reaches `setNodePositions` with the ids and coordinates given.
-- An empty batch does not call into JavaScript.
+- An empty batch, for either mechanism, does not call into JavaScript.
 - `ClearNodePositionsAsync` reaches `clearPositions`.
-- Both throw or no-op predictably when called before the view exists, matching how the other
-  imperative methods on `OrbGraph` already behave — follow the existing pattern rather than
-  inventing a second one.
-- A browser test placing nodes with physics disabled and asserting they stay put. This is the test
-  that turns the caveat above from an inference into a documented behaviour.
+- All four behave predictably when called before the view exists, following the pattern the existing
+  imperative methods on `OrbGraph` already use rather than inventing a second one.
+- A browser test placing nodes with physics disabled and asserting they stay put — this turns the
+  caveat above from an inference into documented behaviour.
 
 ---
 
