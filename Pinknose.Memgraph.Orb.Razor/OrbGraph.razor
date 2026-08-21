@@ -28,7 +28,8 @@
 
     private Dictionary<string, TNode> _sentNodes = [];
     private Dictionary<string, TEdge> _sentEdges = [];
-    private string? _lastDataJson;
+    private Dictionary<string, string> _sentNodeJson = [];
+    private Dictionary<string, string> _sentEdgeJson = [];
     private string? _lastSettingsJson;
     private bool _disposed;
 
@@ -169,7 +170,10 @@
 
             _sentNodes = projection.NodesById;
             _sentEdges = projection.EdgesById;
-            _lastDataJson = dataJson;
+            _sentNodeJson = projection.Payload.Nodes.ToDictionary(
+                n => n.Id, OrbJson.SerializeNode, StringComparer.Ordinal);
+            _sentEdgeJson = projection.Payload.Edges.ToDictionary(
+                e => e.Id, OrbJson.SerializeEdge, StringComparer.Ordinal);
             _lastSettingsJson = settingsJson;
 
             if (_disposed)
@@ -216,30 +220,49 @@
             if (projection is null)
             {
                 // A duplicate id must degrade this update, not crash the circuit. Leave
-                // the id->instance maps and _lastDataJson exactly as they were: the
+                // the id->instance maps and the sent-JSON maps exactly as they were: the
                 // consumer's data is invalid right now, so there is nothing valid to
                 // record, and the previous good state must keep serving events.
                 return;
             }
 
-            var dataJson = OrbJson.SerializeGraph(projection.Payload);
+            var nodeJson = projection.Payload.Nodes.ToDictionary(
+                n => n.Id, OrbJson.SerializeNode, StringComparer.Ordinal);
+            var edgeJson = projection.Payload.Edges.ToDictionary(
+                e => e.Id, OrbJson.SerializeEdge, StringComparer.Ordinal);
 
+            var changedNodeIds = OrbGraphDiff.ChangedIds(_sentNodeJson, nodeJson);
+            var changedEdgeIds = OrbGraphDiff.ChangedIds(_sentEdgeJson, edgeJson);
             var removedNodeIds = OrbGraphDiff.RemovedIds(_sentNodes.Keys, projection.NodesById.Keys);
             var removedEdgeIds = OrbGraphDiff.RemovedIds(_sentEdges.Keys, projection.EdgesById.Keys);
 
             // The id->instance maps must be refreshed whenever we have a fresh projection,
-            // even if dataJson is identical to last time. The JSON only carries id/endpoints
-            // /style/label, so a consumer that reloaded Nodes with an unprojected field
-            // changed (e.g. a domain property not sent to Orb) would otherwise leave these
-            // maps pointing at superseded instances forever, and OnNodeClick etc. would keep
-            // handing back stale objects.
+            // even if nothing changed. The JSON only carries id/endpoints/style/label, so a
+            // consumer that reloaded Nodes with an unprojected field changed (e.g. a domain
+            // property not sent to Orb) would otherwise leave these maps pointing at
+            // superseded instances forever, and OnNodeClick etc. would keep handing back
+            // stale objects.
             _sentNodes = projection.NodesById;
             _sentEdges = projection.EdgesById;
+            _sentNodeJson = nodeJson;
+            _sentEdgeJson = edgeJson;
 
-            if (dataJson != _lastDataJson || removedNodeIds.Length > 0 || removedEdgeIds.Length > 0)
+            if (changedNodeIds.Length > 0 || changedEdgeIds.Length > 0
+                || removedNodeIds.Length > 0 || removedEdgeIds.Length > 0)
             {
-                await _module!.InvokeVoidAsync("updateData", _handle, dataJson, removedNodeIds, removedEdgeIds);
-                _lastDataJson = dataJson;
+                // Only the changed subset goes over the wire. Orb's merge() upserts, so a node it
+                // already holds and that did not change needs no mention.
+                var changedNodes = new HashSet<string>(changedNodeIds, StringComparer.Ordinal);
+                var changedEdges = new HashSet<string>(changedEdgeIds, StringComparer.Ordinal);
+
+                var delta = new OrbGraphPayload
+                {
+                    Nodes = [.. projection.Payload.Nodes.Where(n => changedNodes.Contains(n.Id))],
+                    Edges = [.. projection.Payload.Edges.Where(e => changedEdges.Contains(e.Id))],
+                };
+
+                await _module!.InvokeVoidAsync(
+                    "updateData", _handle, OrbJson.SerializeGraph(delta), removedNodeIds, removedEdgeIds);
             }
 
             var settingsJson = Settings is null ? null : OrbJson.SerializeSettings(Settings);
