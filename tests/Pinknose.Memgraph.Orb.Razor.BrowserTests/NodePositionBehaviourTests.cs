@@ -78,6 +78,22 @@ public sealed class NodePositionBehaviourTests
             """);
         await _page.WaitForTimeoutAsync(150);
 
+        // Sanity check that the settings call above actually landed, rather than assuming it:
+        // Orb's setSettings() only honours isPhysicsEnabled as a FLAT key under "layout" (a
+        // nested { layout: { options: { isPhysicsEnabled } } } shape is silently ignored except
+        // for useGPU -- see task-1-report.md's "Out-of-scope finding"). Without this, a future
+        // regression in this call -- or in Orb itself -- would silently turn this test into a
+        // duplicate of SetNodePositions_WithPhysicsDisabled_Holds and nothing would say so.
+        var isPhysicsEnabled = await _page.EvaluateAsync<bool?>(
+            "() => window.__orbTestView.getSettings().layout.isPhysicsEnabled");
+        Assert.IsTrue(
+            isPhysicsEnabled == true,
+            "precondition: physics must be observably running (getSettings().layout."
+                + $"isPhysicsEnabled) before placing the node, but it reads {isPhysicsEnabled}. "
+                + "Without this, a stuck physics-disabled setting would make this test pass for "
+                + "the same reason as SetNodePositions_WithPhysicsDisabled_Holds instead of "
+                + "proving the claim it's named for.");
+
         var before = await _driver.ReadPositionAsync(NodeId);
 
         // Placed far outside the graph. If this write reached the simulator, n1's spring back
