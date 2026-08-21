@@ -135,6 +135,20 @@ internal sealed class OrbPageDriver(IPage page)
         throw new InvalidOperationException($"No node with id '{id}' in the position snapshot.");
     }
 
+    // Orb's clearPosition() sets a node's x/y to undefined rather than removing the node, so
+    // ReadPositionAsync's GetProperty("x") is the wrong tool to detect that -- JSON.stringify
+    // omits an undefined property rather than nulling it, and GetProperty throws on a missing
+    // one. This checks presence directly instead.
+    public Task<bool> NodeHasPositionAsync(string id)
+        => page.EvaluateAsync<bool>(
+            """
+            (id) => {
+                const p = window.__orbTestView.data.getNodePositions().find((p) => p.id === id);
+                return !!p && typeof p.x === 'number' && typeof p.y === 'number';
+            }
+            """,
+            id);
+
     public static double Distance((double X, double Y) a, (double X, double Y) b)
     {
         var dx = a.X - b.X;

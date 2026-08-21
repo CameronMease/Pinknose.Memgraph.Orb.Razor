@@ -213,6 +213,81 @@ public sealed class NodePositionBehaviourTests
             $"b's own seed should have taken effect, but b entered at ({afterB.X:F2},{afterB.Y:F2})");
     }
 
+    // Finding 2 (final pre-merge review): the XML doc on ClearNodePositionsAsync used to read as
+    // the narrow inverse of SetNodePositionsAsync ("Clears positions Orb is holding for existing
+    // nodes"). It is not: it calls Orb's own clearPositions(), which blanks every node it holds,
+    // including ones the caller never touched. This proves the actual (now documented) behaviour
+    // rather than only the doc comment, so a future change that narrows the JS back down without
+    // updating the doc would fail here.
+    [TestMethod]
+    public async Task ClearNodePositionsAsync_ClearsEveryNodesPosition()
+    {
+        await GoToAsync();
+
+        // n1 gets an explicit override, mirroring the failure scenario the finding describes:
+        // set one node's position, then try to undo it.
+        var before = await _driver.ReadPositionAsync(NodeId);
+        var target = (X: before.X + 5000, Y: before.Y + 5000);
+        await SetNodePositionAsync(NodeId, target.X, target.Y);
+
+        await _page.ClickAsync("#clear-positions-btn");
+        await _page.WaitForTimeoutAsync(300);
+
+        Assert.IsFalse(
+            await _driver.NodeHasPositionAsync(NodeId),
+            "n1's explicit override should be gone after ClearNodePositionsAsync");
+
+        // n2 was never explicitly positioned -- laid out entirely by Orb's fallback layout. If
+        // ClearNodePositionsAsync only undid explicit overrides, as the old doc could be read to
+        // mean, n2 would still have a position here.
+        Assert.IsFalse(
+            await _driver.NodeHasPositionAsync("n2"),
+            "n2 was never explicitly positioned, so a ClearNodePositionsAsync that only cleared "
+                + "explicit overrides would have left it untouched -- but it lost its position "
+                + "too, proving the call wipes the whole layout, not just n1's override.");
+    }
+
+    // Finding 3 (final pre-merge review): updateData's removal branch deleted a node from Orb
+    // but left its entry in the seed map (handle.positions) behind. A later, unrelated re-add of
+    // the same id would then silently enter at the stale coordinate from the earlier interaction
+    // instead of Orb's normal entry point.
+    [TestMethod]
+    public async Task ARemovedNodesSeed_DoesNotSurviveForALaterReAdd()
+    {
+        await GoToAsync();
+
+        const string Id = "n4";
+
+        // Seed far outside the demo's three-node cluster, add it through the real Nodes-list
+        // path (see AddNodeAsync -- unlike MergeNodesAsync, this actually reaches
+        // OrbGraph.PushChangesAsync's removal branch when the node is later removed), and
+        // confirm it entered near the seed before relying on that as a baseline.
+        await SeedPositionAsync(Id, FarSeedOffset, FarSeedOffset);
+        await AddNodeAsync(Id);
+
+        var enteredNearSeed = await _driver.ReadPositionAsync(Id);
+        Assert.IsLessThan(
+            50.0,
+            OrbPageDriver.Distance((FarSeedOffset, FarSeedOffset), enteredNearSeed),
+            "precondition: n4 must actually enter near its seed the first time, or a later "
+                + "miss proves nothing about staleness.");
+
+        await RemoveNodeAsync(Id);
+
+        // Re-add without seeding again.
+        await AddNodeAsync(Id);
+
+        var afterReAdd = await _driver.ReadPositionAsync(Id);
+        var distanceFromStaleSeed = OrbPageDriver.Distance((FarSeedOffset, FarSeedOffset), afterReAdd);
+
+        Assert.IsGreaterThan(
+            50.0,
+            distanceFromStaleSeed,
+            $"n4 re-entered near its old seed ({FarSeedOffset},{FarSeedOffset}) at "
+                + $"({afterReAdd.X:F2},{afterReAdd.Y:F2}) after being removed and re-added "
+                + "without a fresh seed -- the seed map was not cleaned up on removal.");
+    }
+
     private async Task GoToAsync()
     {
         await _page.GotoAsync($"{SampleHostFixture.BaseUrl}{Route}");
@@ -246,6 +321,28 @@ public sealed class NodePositionBehaviourTests
         await _page.WaitForTimeoutAsync(200);
         await _page.ClickAsync("#seed-btn");
         await _page.WaitForTimeoutAsync(200);
+    }
+
+    // Drives the demo's generic add/remove-by-id controls (see OrbDemoView.razor), which mutate
+    // the real Nodes/Edges lists bound to <OrbGraph> -- unlike MergeNodesAsync below, this goes
+    // through OrbGraph.PushChangesAsync for real, so a subsequent RemoveNodeAsync exercises the
+    // removal branch that Finding 3 is about.
+    private async Task AddNodeAsync(string id)
+    {
+        var before = await _driver.CountNodesAsync();
+        await _page.FillAsync("#node-id-input", id);
+        await _page.WaitForTimeoutAsync(200);
+        await _page.ClickAsync("#add-node-btn");
+        await _driver.WaitForNodeCountAsync(before + 1);
+    }
+
+    private async Task RemoveNodeAsync(string id)
+    {
+        var before = await _driver.CountNodesAsync();
+        await _page.FillAsync("#node-id-input", id);
+        await _page.WaitForTimeoutAsync(200);
+        await _page.ClickAsync("#remove-node-btn");
+        await _driver.WaitForNodeCountAsync(before - 1);
     }
 
     // Adds nodes straight through Orb's own data.merge(), the same way SetNodePositionAsync

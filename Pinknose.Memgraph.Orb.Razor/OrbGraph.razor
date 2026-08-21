@@ -244,8 +244,6 @@
             // stale objects.
             _sentNodes = projection.NodesById;
             _sentEdges = projection.EdgesById;
-            _sentNodeJson = nodeJson;
-            _sentEdgeJson = edgeJson;
 
             if (changedNodeIds.Length > 0 || changedEdgeIds.Length > 0
                 || removedNodeIds.Length > 0 || removedEdgeIds.Length > 0)
@@ -263,6 +261,13 @@
 
                 await _module!.InvokeVoidAsync(
                     "updateData", _handle, OrbJson.SerializeGraph(delta), removedNodeIds, removedEdgeIds);
+
+                // Only recorded once the interop call has actually succeeded. If updateData
+                // throws (a JSException from Orb's merge, or JSDisconnectedException), Orb never
+                // received this delta -- so the next diff must still see these ids as changed and
+                // resend them, rather than believing they are already on screen.
+                _sentNodeJson = nodeJson;
+                _sentEdgeJson = edgeJson;
             }
 
             var settingsJson = Settings is null ? null : OrbJson.SerializeSettings(Settings);
@@ -489,7 +494,17 @@
         await InvokeViewAsync("setNodePositions", batch);
     }
 
-    /// <summary>Clears positions Orb is holding for existing nodes.</summary>
+    /// <summary>
+    /// Clears the rendered position of <b>every</b> node in the graph, not only the ones this
+    /// component set through <see cref="SetNodePositionsAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// This calls Orb's own <c>clearPositions()</c>, which walks every node it holds and blanks
+    /// its coordinates -- including positions the force simulation itself computed. With physics
+    /// disabled (the common case; see <see cref="SetNodePositionsAsync"/>) nothing recomputes
+    /// them afterward, so calling this wipes the whole layout, not just one node's override.
+    /// There is no per-id variant.
+    /// </remarks>
     public async ValueTask ClearNodePositionsAsync() => await InvokeViewAsync("clearNodePositions");
 
     /// <summary>Exports the current view as SVG markup.</summary>

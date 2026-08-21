@@ -33,11 +33,6 @@ internal static class OrbGraphDiff
         IReadOnlyDictionary<string, string> previous,
         IReadOnlyDictionary<string, string> current)
     {
-        if (current.Count == 0)
-        {
-            return [];
-        }
-
         var changed = new List<string>();
 
         foreach (var (id, json) in current)

@@ -208,8 +208,9 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
     const positions = new Map();
     const view = new OrbView(host, {
         // Read on every setup and merge, for the nodes being added. This is what decides where a
-        // node ENTERS the simulation -- setNodePositions writes the rendered position after the
-        // fact and the simulator overwrites it.
+        // node ENTERS the simulation -- setNodePositions writes the rendered position directly and
+        // the simulator never observes it, so that write holds even under a hot simulation
+        // (measured in Task 1; see the XML doc on SetNodePositionsAsync).
         getPosition: (node) => positions.get(String(node.getId())),
     });
     const handle = { view, host, dotNetRef, positions, defaultSettings: view.getSettings() };
@@ -263,6 +264,15 @@ export function updateData(handle, dataJson, removedNodeIds, removedEdgeIds) {
             nodeIds: removedNodeIds ?? [],
             edgeIds: removedEdgeIds ?? []
         });
+
+        // Otherwise a removed node's seed outlives the node itself: a later, unrelated re-add of
+        // the same id would silently enter at whatever coordinate was seeded for the earlier
+        // instance, and the map would grow without bound over a long-lived circuit that keeps
+        // adding and removing nodes. Ids are stored coerced with String(...) (see
+        // setSeedPositions), so match that here.
+        for (const id of removedNodeIds ?? []) {
+            handle.positions.delete(String(id));
+        }
     }
 
     if (payload) {
