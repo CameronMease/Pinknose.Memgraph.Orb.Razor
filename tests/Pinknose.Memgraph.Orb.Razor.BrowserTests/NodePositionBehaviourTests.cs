@@ -168,11 +168,14 @@ public sealed class NodePositionBehaviourTests
         // seed rather than wherever Orb's fallback layout would otherwise drop it.
         await MergeNodesAsync("n4");
 
-        // Read back immediately: physics is off in this demo (OrbForceLayout.IsPhysicsEnabled
+        // merge() returning only means the node exists, not that OrbView's onMergeData has
+        // consulted getPosition and handed the seed to the simulator yet -- wait for that to
+        // land before reading. Physics is off in this demo (OrbForceLayout.IsPhysicsEnabled
         // defaults to false, per UpdatingNodes_PreservesExistingPositions above), so nothing
         // should move n4 after entry -- but the assertion is about where it entered, not about
         // where it settles, so a threshold well inside the 5000-unit seed offset is used
         // rather than exact equality.
+        await _driver.WaitForPositionAsync("n4");
         var after = await _driver.ReadPositionAsync("n4");
         var distanceFromSeed = OrbPageDriver.Distance((FarSeedOffset, FarSeedOffset), after);
 
@@ -198,6 +201,11 @@ public sealed class NodePositionBehaviourTests
         await SeedPositionAsync("b", seedB.X, seedB.Y);
 
         await MergeNodesAsync("a", "b");
+
+        // Same reasoning as ANodeMergedAfterItsSeedWasSet_EntersAtThatCoordinate above: merge()
+        // returning does not mean either node has been placed yet.
+        await _driver.WaitForPositionAsync("a");
+        await _driver.WaitForPositionAsync("b");
 
         var afterA = await _driver.ReadPositionAsync("a");
         var afterB = await _driver.ReadPositionAsync("b");
@@ -265,6 +273,11 @@ public sealed class NodePositionBehaviourTests
         await SeedPositionAsync(Id, FarSeedOffset, FarSeedOffset);
         await AddNodeAsync(Id);
 
+        // AddNodeAsync's wait is only for the node count to update; it says nothing about
+        // whether Orb has assigned the new node a position yet. Wait for that explicitly instead
+        // of racing it -- on a slow/cold runner the read can otherwise land before the seed has
+        // been handed to the simulator, throwing instead of failing the assertion meaningfully.
+        await _driver.WaitForPositionAsync(Id);
         var enteredNearSeed = await _driver.ReadPositionAsync(Id);
         Assert.IsLessThan(
             50.0,
@@ -277,6 +290,12 @@ public sealed class NodePositionBehaviourTests
         // Re-add without seeding again.
         await AddNodeAsync(Id);
 
+        // Same race as the precondition read above: the node existing (AddNodeAsync's wait)
+        // is not the same as the node having a position yet. This is the fix for the CI flake
+        // (KeyNotFoundException from ReadPositionAsync) -- on a fast box the simulator/fallback
+        // layout wins the race against this read; on a cold CI runner it doesn't, and the read
+        // used to land while n4 had only an "id" entry and no x/y.
+        await _driver.WaitForPositionAsync(Id);
         var afterReAdd = await _driver.ReadPositionAsync(Id);
         var distanceFromStaleSeed = OrbPageDriver.Distance((FarSeedOffset, FarSeedOffset), afterReAdd);
 
