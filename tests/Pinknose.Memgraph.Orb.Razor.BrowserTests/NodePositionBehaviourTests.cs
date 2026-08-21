@@ -19,7 +19,11 @@ namespace Pinknose.Memgraph.Orb.Razor.BrowserTests;
 [TestClass]
 public sealed class NodePositionBehaviourTests
 {
-    private const string Route = "/orb-server";
+    // ?seedTest=true opts into OrbDemoView's seed-position controls (see the markup comment
+    // there): they are gated off by default, the same way orbGraph.js only creates
+    // window.__orbTestView when the host carries data-orb-test, so this file has to ask for
+    // them explicitly rather than finding them always present.
+    private const string Route = "/orb-server?seedTest=true";
     private const string NodeId = "n1";
 
     private static IPlaywright _playwright = null!;

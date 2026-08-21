@@ -23,11 +23,23 @@
    enough to drive setNodePositions/merge/etc. directly from JS -- but the position map
    getPosition reads lives on the JS "handle" object this component holds, which nothing on
    window exposes. Going through the real component method is also more faithful than
-   reinventing the interop call in the test. *@
-<input id="seed-id-input" @bind="_seedId" @bind:event="oninput" placeholder="seed node id" />
-<input id="seed-x-input" type="number" @bind="_seedX" @bind:event="oninput" placeholder="seed x" />
-<input id="seed-y-input" type="number" @bind="_seedY" @bind:event="oninput" placeholder="seed y" />
-<button id="seed-btn" class="btn btn-secondary" @onclick="SeedPositionAsync">Seed position</button>
+   reinventing the interop call in the test.
+
+   Gated behind ?seedTest=true rather than always rendered, for the same reason orbGraph.js
+   only creates window.__orbTestView when the host carries data-orb-test: a test seam should
+   not exist on a normal run of the sample. data-orb-test itself is consumed purely on the JS
+   side (host.hasAttribute in orbGraph.js) and is already relied on, unconditioned, by every
+   other browser test in the suite -- conditioning it here would mean also touching every one
+   of those tests' navigation just to keep them passing. The query-string opt-in already used
+   for ?styling= above is this file's existing equivalent for gating a Razor-rendered surface,
+   so this reuses that mechanism rather than inventing a third one. *@
+@if (_seedControlsEnabled)
+{
+    <input id="seed-id-input" @bind="_seedId" @bind:event="oninput" placeholder="seed node id" />
+    <input id="seed-x-input" type="number" @bind="_seedX" @bind:event="oninput" placeholder="seed x" />
+    <input id="seed-y-input" type="number" @bind="_seedY" @bind:event="oninput" placeholder="seed y" />
+    <button id="seed-btn" class="btn btn-secondary" @onclick="SeedPositionAsync">Seed position</button>
+}
 
 <OrbGraph TNode="Person" TEdge="Relationship"
           @ref="_graph"
@@ -85,6 +97,7 @@
     private Person? _selected;
     private Person? _hovered;
     private StylingMode _styling = StylingMode.Full;
+    private bool _seedControlsEnabled;
     private string _seedId = "";
     private double _seedX;
     private double _seedY;
@@ -114,6 +127,9 @@
         {
             _styling = mode;
         }
+
+        _seedControlsEnabled = string.Equals(
+            QueryValue(Nav.Uri, "seedTest"), "true", StringComparison.OrdinalIgnoreCase);
 
         _people =
         [
