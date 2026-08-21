@@ -33,6 +33,8 @@ namespace Pinknose.Memgraph.Orb.Razor;
 [JsonSerializable(typeof(OrbGridLayout))]
 [JsonSerializable(typeof(OrbCircularLayout))]
 [JsonSerializable(typeof(OrbHierarchicalLayout))]
+[JsonSerializable(typeof(OrbNodePayload))]
+[JsonSerializable(typeof(OrbEdgePayload))]
 internal sealed partial class OrbJsonContext : JsonSerializerContext;
 
 /// <summary>Serialization for everything crossing to JavaScript.</summary>
@@ -50,6 +52,15 @@ internal static class OrbJson
 
     public static string SerializeSettings(OrbSettings settings)
         => JsonSerializer.Serialize(settings, TypeInfo<OrbSettings>(Options));
+
+    // Serialized individually so an update can compare node against node and send only what
+    // differs. The comparison must read exactly what gets sent, which is why this shares the same
+    // options and the same generated metadata as SerializeGraph rather than being reimplemented.
+    public static string SerializeNode(OrbNodePayload payload)
+        => JsonSerializer.Serialize(payload, TypeInfo<OrbNodePayload>(Options));
+
+    public static string SerializeEdge(OrbEdgePayload payload)
+        => JsonSerializer.Serialize(payload, TypeInfo<OrbEdgePayload>(Options));
 
     /// <summary>The generated metadata for <typeparamref name="T"/>, bound to these options.</summary>
     // Resolved through the options rather than off OrbJsonContext.Default directly, so the

@@ -132,4 +132,38 @@ public class OrbSerializationTests
 
         StringAssert.Contains(json, "\"lineStyle\":{\"type\":\"custom\",\"pattern\":[4,2]}");
     }
+
+    [TestMethod]
+    public void SerializeNode_ProducesTheSameShapeAsInsideAWholeGraph()
+    {
+        // The per-node serialization is what change detection compares, so it has to describe the
+        // node exactly as the graph payload does. If the two ever diverge, a node could look
+        // unchanged individually while its graph representation differs.
+        var node = new OrbNodePayload { Id = "n1", Style = new OrbNodeStylePayload { Color = "#fff" } };
+
+        var alone = OrbJson.SerializeNode(node);
+        var inGraph = OrbJson.SerializeGraph(new OrbGraphPayload { Nodes = [node], Edges = [] });
+
+        StringAssert.Contains(inGraph, alone);
+    }
+
+    [TestMethod]
+    public void SerializeNode_TwoNodesDifferingOnlyByStyle_SerializeDifferently()
+    {
+        var a = new OrbNodePayload { Id = "n1", Style = new OrbNodeStylePayload { Color = "#fff" } };
+        var b = new OrbNodePayload { Id = "n1", Style = new OrbNodeStylePayload { Color = "#000" } };
+
+        Assert.AreNotEqual(OrbJson.SerializeNode(a), OrbJson.SerializeNode(b));
+    }
+
+    [TestMethod]
+    public void SerializeEdge_IncludesEndpoints()
+    {
+        var edge = new OrbEdgePayload { Id = "e1", Start = "n1", End = "n2" };
+
+        var json = OrbJson.SerializeEdge(edge);
+
+        StringAssert.Contains(json, "\"start\":\"n1\"");
+        StringAssert.Contains(json, "\"end\":\"n2\"");
+    }
 }
