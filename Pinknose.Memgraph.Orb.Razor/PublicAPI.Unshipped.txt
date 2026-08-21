@@ -174,6 +174,8 @@ Pinknose.Memgraph.Orb.Razor.OrbForceYPosition.Y.set -> void
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.AdditionalAttributes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object!>?
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.AdditionalAttributes.set -> void
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.ClearNodePositionsAsync() -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.ClearSeedPositionsAsync() -> System.Threading.Tasks.ValueTask
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.DisposeAsync() -> System.Threading.Tasks.ValueTask
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Edges.get -> System.Collections.Generic.IEnumerable<TEdge>!
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Edges.set -> void
@@ -210,6 +212,8 @@ Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.RecenterAsync() -> System.Thr
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.ReleaseNodesAsync() -> System.Threading.Tasks.ValueTask
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.SelectEdgeAsync(string! id) -> System.Threading.Tasks.ValueTask
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.SelectNodeAsync(string! id) -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.SetNodePositionsAsync(System.Collections.Generic.IEnumerable<Pinknose.Memgraph.Orb.Razor.OrbNodePosition>! positions) -> System.Threading.Tasks.ValueTask
+Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.SetSeedPositionsAsync(System.Collections.Generic.IEnumerable<Pinknose.Memgraph.Orb.Razor.OrbNodePosition>! positions) -> System.Threading.Tasks.ValueTask
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Settings.get -> Pinknose.Memgraph.Orb.Razor.OrbSettings?
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.Settings.set -> void
 Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.UnselectAllAsync() -> System.Threading.Tasks.ValueTask
@@ -265,6 +269,17 @@ Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.LocalPoint.init -> void
 Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.Node.get -> TNode
 Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.Node.init -> void
 Pinknose.Memgraph.Orb.Razor.OrbNodeEventArgs<TNode>.OrbNodeEventArgs() -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Deconstruct(out string! Id, out double X, out double Y) -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Equals(Pinknose.Memgraph.Orb.Razor.OrbNodePosition other) -> bool
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Id.get -> string!
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Id.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.OrbNodePosition() -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.OrbNodePosition(string! Id, double X, double Y) -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.X.get -> double
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.X.init -> void
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Y.get -> double
+Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Y.init -> void
 Pinknose.Memgraph.Orb.Razor.OrbNodeShape
 Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Circle = 0 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
 Pinknose.Memgraph.Orb.Razor.OrbNodeShape.Diamond = 3 -> Pinknose.Memgraph.Orb.Razor.OrbNodeShape
@@ -398,13 +413,18 @@ override Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnAfterRenderAsync(b
 override Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.OnParametersSet() -> void
 override Pinknose.Memgraph.Orb.Razor.OrbGridLayout.LayoutType.get -> string!
 override Pinknose.Memgraph.Orb.Razor.OrbHierarchicalLayout.LayoutType.get -> string!
+override Pinknose.Memgraph.Orb.Razor.OrbNodePosition.GetHashCode() -> int
 override Pinknose.Memgraph.Orb.Razor.OrbPoint.GetHashCode() -> int
 static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Custom(params double[]! pattern) -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
 static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Dashed.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
 static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Dotted.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
 static Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle.Solid.get -> Pinknose.Memgraph.Orb.Razor.OrbEdgeLineStyle!
+static Pinknose.Memgraph.Orb.Razor.OrbNodePosition.operator !=(Pinknose.Memgraph.Orb.Razor.OrbNodePosition left, Pinknose.Memgraph.Orb.Razor.OrbNodePosition right) -> bool
+static Pinknose.Memgraph.Orb.Razor.OrbNodePosition.operator ==(Pinknose.Memgraph.Orb.Razor.OrbNodePosition left, Pinknose.Memgraph.Orb.Razor.OrbNodePosition right) -> bool
 static Pinknose.Memgraph.Orb.Razor.OrbPoint.operator !=(Pinknose.Memgraph.Orb.Razor.OrbPoint left, Pinknose.Memgraph.Orb.Razor.OrbPoint right) -> bool
 static Pinknose.Memgraph.Orb.Razor.OrbPoint.operator ==(Pinknose.Memgraph.Orb.Razor.OrbPoint left, Pinknose.Memgraph.Orb.Razor.OrbPoint right) -> bool
 ~override Pinknose.Memgraph.Orb.Razor.OrbGraph<TNode, TEdge>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override Pinknose.Memgraph.Orb.Razor.OrbNodePosition.Equals(object obj) -> bool
+~override Pinknose.Memgraph.Orb.Razor.OrbNodePosition.ToString() -> string
 ~override Pinknose.Memgraph.Orb.Razor.OrbPoint.Equals(object obj) -> bool
 ~override Pinknose.Memgraph.Orb.Razor.OrbPoint.ToString() -> string

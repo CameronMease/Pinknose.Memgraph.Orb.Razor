@@ -264,4 +264,46 @@ public class OrbGraphComponentTests : BunitContext
         Assert.IsFalse(module.Invocations.Identifiers.Contains("recenter"),
             "disposal must short-circuit before the call reaches interop");
     }
+
+    [TestMethod]
+    public async Task SetSeedPositionsAsync_SendsTheCoordinatesToTheMap()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        await cut.Instance.SetSeedPositionsAsync([new OrbNodePosition("n1", 10, 20)]);
+
+        Assert.AreEqual(1, module.Invocations["setSeedPositions"].Count);
+    }
+
+    [TestMethod]
+    public async Task SetSeedPositionsAsync_AnEmptyBatch_DoesNotCallIntoJavaScript()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        await cut.Instance.SetSeedPositionsAsync([]);
+
+        Assert.IsFalse(module.Invocations.Identifiers.Contains("setSeedPositions"));
+    }
+
+    [TestMethod]
+    public async Task SetNodePositionsAsync_ReachesTheGraph()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        await cut.Instance.SetNodePositionsAsync([new OrbNodePosition("n1", 10, 20)]);
+
+        Assert.AreEqual(1, module.Invocations["setNodePositions"].Count);
+    }
 }

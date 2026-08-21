@@ -440,6 +440,58 @@
     /// <param name="id">The <see cref="IOrbEdge.Id"/> of the edge to select.</param>
     public async ValueTask SelectEdgeAsync(string id) => await InvokeViewAsync("selectEdge", id);
 
+    /// <summary>
+    /// Sets where nodes <b>enter</b> the simulation. Merges into what was seeded before, so a
+    /// caller seeding newly arriving nodes need not restate the ones already placed.
+    /// </summary>
+    /// <remarks>
+    /// Orb reads these coordinates when a node is set up or merged, and hands the result to the
+    /// simulator -- so a seeded node starts where it was told. It does not stay there: physics
+    /// moves it like any other node from that point on, which is why this is <c>Seed</c> and not
+    /// <c>Set</c>. To place a node and have it hold regardless of the simulation, use
+    /// <see cref="SetNodePositionsAsync"/> instead.
+    /// </remarks>
+    /// <param name="positions">The coordinates to seed. An empty sequence is a no-op.</param>
+    public async ValueTask SetSeedPositionsAsync(IEnumerable<OrbNodePosition> positions)
+    {
+        var batch = positions as ICollection<OrbNodePosition> ?? positions.ToList();
+
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        await InvokeViewAsync("setSeedPositions", batch);
+    }
+
+    /// <summary>Forgets every seeded position. Nodes already placed are not moved.</summary>
+    public async ValueTask ClearSeedPositionsAsync() => await InvokeViewAsync("clearSeedPositions");
+
+    /// <summary>Moves nodes already in the graph, writing the rendered position directly.</summary>
+    /// <remarks>
+    /// This position is durable unconditionally, whether or not the force simulation is running:
+    /// measured (not merely inferred from source) placing a node far outside the graph under a
+    /// permanently hot simulation and finding it held bit-exact. The simulator simply never
+    /// observes a write made this way, so there is nothing for it to overwrite. This is not the
+    /// way to influence where a node lands as it enters a <i>running</i> layout and then continues
+    /// moving under physics -- for that, use <see cref="SetSeedPositionsAsync"/>.
+    /// </remarks>
+    /// <param name="positions">The coordinates to write. An empty sequence is a no-op.</param>
+    public async ValueTask SetNodePositionsAsync(IEnumerable<OrbNodePosition> positions)
+    {
+        var batch = positions as ICollection<OrbNodePosition> ?? positions.ToList();
+
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        await InvokeViewAsync("setNodePositions", batch);
+    }
+
+    /// <summary>Clears positions Orb is holding for existing nodes.</summary>
+    public async ValueTask ClearNodePositionsAsync() => await InvokeViewAsync("clearNodePositions");
+
     /// <summary>Exports the current view as SVG markup.</summary>
     /// <returns>
     /// The SVG document as a string, or an empty string if the graph is not ready or the
