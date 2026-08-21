@@ -1,10 +1,31 @@
 # Pinknose.Memgraph.Orb.Razor — Incremental Updates and Node Positions
 
 **Date:** 2026-08-21
-**Revision:** B
+**Revision:** C
 **Status:** Approved design, ready for implementation planning
 **Scope:** Two changes to the wrapper — sending only what changed on an update, and exposing Orb's
 node positioning. One is internal; one moves the public API.
+
+**Revision C, 2026-08-21.** Task 1 of the implementation plan measured the claim Revision B made by
+reading source — that a position set through `setNodePositions` while physics is running gets
+overwritten as soon as the simulator next reports. **It does not.** Measured directly (browser test,
+Orb 1.0.2, 3 runs, bit-identical): a node placed 5000 units outside the graph, under a force
+simulation kept permanently hot (`isPhysicsEnabled: true`, `alphaTarget: 0.3`, never allowed to settle)
+so a report was guaranteed to occur, held exactly where it was placed for 2 full seconds — not "drifted
+back a little," exactly unmoved. A companion check forcing two nodes to the same coordinate under that
+same hot simulation produced zero many-body repulsion either, which rules out "physics silently is not
+running" as the explanation: `setNodePositions` writes are simply invisible to the simulator, running
+or not. See `tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/NodePositionBehaviourTests.cs` and
+`.superpowers/sdd/2026-08-21-incremental-updates-and-positions/task-1-report.md` for the full
+measurement, including the controls.
+
+This simplifies rather than complicates the design: `setNodePositions` is durable unconditionally, not
+only when physics is off. The distinction from `getPosition` (below) still stands and still matters —
+`getPosition` is where a node *enters* the simulation and is then free to move under physics from
+there; `setNodePositions` is a position the simulator never sees and therefore never moves — but the
+"physics caveat" that drove the earlier `IsPhysicsEnabled = false` guidance is retracted. The caveat
+section below and the survives-a-tick column are corrected accordingly rather than left to contradict
+this measurement.
 
 **Revision B, 2026-08-21.** Revision A deferred the `getPosition` view-settings hook as "building for
 a consumer that has not asked", and made `setNodePositions` the positioning mechanism. **That had the
@@ -182,7 +203,7 @@ got wrong, so the distinction leads.
 | | Reaches the simulator? | When it applies | Survives a tick? |
 |---|---|---|---|
 | `getPosition` (view setting) | **Yes** — via `simulator.setupData`/`mergeData` | when a node is set up or merged | it *is* where the node starts |
-| `setNodePositions` (graph) | No — writes the rendered position only | whenever called | no, while physics runs |
+| `setNodePositions` (graph) | No — writes the rendered position only | whenever called | **Yes, unconditionally** — measured, Task 1 |
 
 ### The position map — `getPosition`
 
@@ -227,16 +248,17 @@ public ValueTask ClearNodePositionsAsync();
 
 Batch, matching `IGraph.setNodePositions`, one interop call for any number of nodes.
 
-**The physics caveat, which must be documented prominently or it will be reported as a bug.** This
-writes the rendered position, not sticky coordinates, so a position set while the simulation is
-running is expected to be overwritten as soon as the simulator next reports.
+**No physics caveat.** Revision B predicted, from reading source, that this writes the rendered
+position rather than sticky coordinates and so would be overwritten as soon as the simulator next
+reports while physics is running. Task 1 measured it directly instead of documenting the inference:
+it does not get overwritten, running physics or not. `setNodePositions` is simply not a route the
+simulator observes at all — not "durable only while physics is off," durable unconditionally. See
+`.superpowers/sdd/2026-08-21-incremental-updates-and-positions/task-1-report.md` for the measurement.
 
-*(Inference, not measured: the mechanism is read from source, the behaviour has not been observed.
-The implementation plan confirms it first, because the documentation's shape depends on the answer.)*
-
-It is durable when the simulation is not running — `OrbForceLayout` with `IsPhysicsEnabled = false`,
-or a static layout. That is the supported use: **a caller placing nodes deliberately turns physics
-off and places them.** A caller who wants to influence a running force layout wants `getPosition`.
+This still is not the mechanism for influencing a *running* force layout — a node moved this way sits
+at the given coordinate exactly because the simulator never sees it, so it also never joins in physics
+from there. A caller who wants a node to enter the simulation at a coordinate and then move naturally
+under physics still wants `getPosition`.
 
 ### What is still not exposed
 
@@ -271,8 +293,9 @@ states the API is likely to change, so this needs release notes rather than a co
 - `ClearNodePositionsAsync` reaches `clearPositions`.
 - All four behave predictably when called before the view exists, following the pattern the existing
   imperative methods on `OrbGraph` already use rather than inventing a second one.
-- A browser test placing nodes with physics disabled and asserting they stay put — this turns the
-  caveat above from an inference into documented behaviour.
+- Covered directly by `NodePositionBehaviourTests` (Task 1): a browser test placing nodes with physics
+  running and one with physics disabled, both asserting the position holds. No further test needed
+  here beyond confirming the batch reaches `setNodePositions` with the given ids and coordinates.
 
 ---
 
@@ -294,8 +317,11 @@ carrying one each.
   WebAssembly. `Msei.RSGraph` ships on Hybrid and will exercise it against a real `.nupkg`. Expected
   to work — an ordinary Blazor host with RCL assets under `_content/` — but expectation is not
   evidence, and the packaging is the layer most likely to decide it.
-- **The physics caveat is the most likely source of a "positions do not work" report.** Mitigated by
-  documentation and by the browser test above, not by API design, because the limitation is Orb's.
+- **`setNodePositions` never rejoins physics.** Measured (Task 1): the position holds unconditionally,
+  which also means a node moved this way sits outside the simulation from then on rather than
+  settling back in. A caller expecting a "nudge" that physics then continues from wants `getPosition`
+  instead, and the doc comments need to say so plainly — the risk moved from "reported as a bug" to
+  "reached for the wrong mechanism," which is a naming and doc-comment problem, not a physics one.
 - **Per-node serialized comparison costs a full serialize per update**, the same as today. It reduces
   bytes on the wire, not CPU in the render loop. If serialization cost ever becomes the constraint,
   that is a different change with a different design.
