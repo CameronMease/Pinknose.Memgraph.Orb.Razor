@@ -99,10 +99,54 @@ full re-`setup()`. `merge()` upserts in place, so nodes that already exist keep 
 simulated position instead of the graph re-laying out from scratch. Only genuinely new nodes
 get a fresh position from Orb's layout.
 
+An update also sends only the nodes and edges whose serialized form actually changed since the
+last push — the component compares what it last sent to what it would send now, one node and
+one edge at a time, and only the differing subset goes over the wire. This is why a large,
+continually-growing graph (a trace view that accumulates nodes as the user expands it, say)
+stays responsive: each update's cost tracks what changed, not the size of everything on screen.
+It also asks nothing of your domain types — there's no equality contract to implement, nothing
+to get subtly wrong by forgetting a field in `Equals`, and no silent degradation if you do. The
+comparison is made from the same JSON the component sends to Orb, so it can't disagree with
+what Orb actually receives.
+
+## Positioning nodes: seeding vs. setting
+
+Two mechanisms both move nodes, sound similar, and do different things. Reaching for the wrong
+one is the most likely way this feature gets misused, so the distinction matters more than
+either method on its own.
+
+| | `SetSeedPositionsAsync` | `SetNodePositionsAsync` |
+|---|---|---|
+| Writes | Where a node **enters** the simulation | The node's **rendered** position |
+| Read by the simulator? | Yes — Orb hands the seeded coordinate to the simulator when the node is set up or merged | No — the simulator never sees this write |
+| What happens next | Physics takes over immediately; the node moves like any other from that point on | The position holds — see below |
+| Clears with | `ClearSeedPositionsAsync` | `ClearNodePositionsAsync` |
+| Reach for it to... | Influence where a newly-arriving node appears in a running force layout | Move an existing node and have it stay put |
+
+**Seeding is not pinning.** A seeded node is only placed at the given coordinate for the instant
+it enters the simulation; physics is free to carry it anywhere from there. If you want new nodes
+to appear near where a caller expects them in a running layout, seed their positions — that's
+the intended use.
+
+**Setting a position holds regardless of physics — this was measured, not assumed from
+reading Orb's source.** An earlier draft of this library's design reasoned from Orb's source that
+a `SetNodePositionsAsync` write would be overwritten the next time a running simulation reported,
+and advised disabling physics before calling it. That reasoning was wrong. Measured directly: a
+node placed 5000 units outside the graph, under a force simulation kept permanently hot so it
+could never settle, held bit-exact for 2 full seconds across 3 runs, while a control confirmed
+physics was genuinely live throughout. The simulator simply never observes a position written
+this way, so there's nothing for it to overwrite — the position is durable **unconditionally**,
+whether or not physics is running. No need to disable physics first.
+
 ## Known gaps
 
 - **`OrbMapView` (geo layout) is not supported.** This library wraps Orb's canvas graph view
   (`OrbView`) only. Orb's map-based view is out of scope.
+- **Pinning individual nodes is not supported.** Orb's simulator can hold specific nodes still
+  while physics arranges the rest around them — its own `IStickyNode` is documented for exactly
+  that — but `OrbView` exposes only `fixNodes()`/`releaseNodes()` over the whole graph and keeps
+  its simulator private. `SetSeedPositionsAsync` decides where a node *enters* the simulation,
+  which is not the same thing. Closing this needs a change to Orb itself.
 
 ## Contributing
 
