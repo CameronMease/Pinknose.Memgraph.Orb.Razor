@@ -146,6 +146,69 @@ public sealed class NodePositionBehaviourTests
                 + $"({after.X:F2},{after.Y:F2})");
     }
 
+    // Placed thousands of units outside the demo's three-node cluster (which settles close to
+    // the canvas origin), so a fallback/default entry position can never be mistaken for a
+    // seeded one -- the two are separated by orders of magnitude, not by rounding error.
+    private const double FarSeedOffset = 5000;
+
+    [TestMethod]
+    public async Task ANodeMergedAfterItsSeedWasSet_EntersAtThatCoordinate()
+    {
+        await GoToAsync();
+
+        // Seed a coordinate for "n4", which does not exist in the graph yet.
+        await SeedPositionAsync("n4", FarSeedOffset, FarSeedOffset);
+
+        // Now add it. Orb's OrbView.onMergeData consults getPosition for newly merged nodes
+        // and hands the result straight to simulator.mergeData, so n4 should start at the
+        // seed rather than wherever Orb's fallback layout would otherwise drop it.
+        await MergeNodesAsync("n4");
+
+        // Read back immediately: physics is off in this demo (OrbForceLayout.IsPhysicsEnabled
+        // defaults to false, per UpdatingNodes_PreservesExistingPositions above), so nothing
+        // should move n4 after entry -- but the assertion is about where it entered, not about
+        // where it settles, so a threshold well inside the 5000-unit seed offset is used
+        // rather than exact equality.
+        var after = await _driver.ReadPositionAsync("n4");
+        var distanceFromSeed = OrbPageDriver.Distance((FarSeedOffset, FarSeedOffset), after);
+
+        Assert.IsLessThan(
+            50.0,
+            distanceFromSeed,
+            $"a node merged after its seed was set should enter near "
+                + $"({FarSeedOffset},{FarSeedOffset}), but entered at ({after.X:F2},{after.Y:F2})");
+    }
+
+    [TestMethod]
+    public async Task SeedingIsMergedNotReplaced()
+    {
+        await GoToAsync();
+
+        var seedA = (X: FarSeedOffset, Y: FarSeedOffset);
+        var seedB = (X: -FarSeedOffset, Y: -FarSeedOffset);
+
+        // Two separate SetSeedPositionsAsync calls, not one batch -- this is the behaviour
+        // under test: seeding "b" must merge into the map instead of replacing it, or "a"'s
+        // seed set moments earlier would be gone by the time both nodes are added below.
+        await SeedPositionAsync("a", seedA.X, seedA.Y);
+        await SeedPositionAsync("b", seedB.X, seedB.Y);
+
+        await MergeNodesAsync("a", "b");
+
+        var afterA = await _driver.ReadPositionAsync("a");
+        var afterB = await _driver.ReadPositionAsync("b");
+
+        Assert.IsLessThan(
+            50.0,
+            OrbPageDriver.Distance(seedA, afterA),
+            $"a's seed should have survived b's separate seed call, but a entered at "
+                + $"({afterA.X:F2},{afterA.Y:F2})");
+        Assert.IsLessThan(
+            50.0,
+            OrbPageDriver.Distance(seedB, afterB),
+            $"b's own seed should have taken effect, but b entered at ({afterB.X:F2},{afterB.Y:F2})");
+    }
+
     private async Task GoToAsync()
     {
         await _page.GotoAsync($"{SampleHostFixture.BaseUrl}{Route}");
@@ -156,4 +219,37 @@ public sealed class NodePositionBehaviourTests
         => _page.EvaluateAsync(
             "([id, x, y]) => window.__orbTestView.data.setNodePositions([{ id, x, y }])",
             new object[] { id, x, y });
+
+    // Drives the sample's test-only seed control (see OrbDemoView.razor) rather than talking
+    // to orbGraph.js directly: the position map getPosition reads lives on the JS "handle"
+    // object the component holds, and nothing on window exposes that handle the way
+    // window.__orbTestView exposes Orb's own view -- SetSeedPositionsAsync is the only route
+    // to it, so this test drives the real component method through the UI.
+    //
+    // Each @bind:event="oninput" fill is a full SignalR round trip on a Blazor Server page --
+    // unlike setting a JS-side value, Fill()'s dispatched "input" event only starts that trip,
+    // it does not wait for the server to have applied it. Measured directly: without the waits
+    // below, clicking #seed-btn raced ahead of the id fill's round trip, _seedId server-side
+    // was still "", and SeedPositionAsync's guard silently no-op'd the whole call -- the merged
+    // node then carried no seed at all (getNodePositions() reported bare {"id":"n4"}, no x/y).
+    private async Task SeedPositionAsync(string id, double x, double y)
+    {
+        await _page.FillAsync("#seed-id-input", id);
+        await _page.WaitForTimeoutAsync(200);
+        await _page.FillAsync("#seed-x-input", $"{x}");
+        await _page.WaitForTimeoutAsync(200);
+        await _page.FillAsync("#seed-y-input", $"{y}");
+        await _page.WaitForTimeoutAsync(200);
+        await _page.ClickAsync("#seed-btn");
+        await _page.WaitForTimeoutAsync(200);
+    }
+
+    // Adds nodes straight through Orb's own data.merge(), the same way SetNodePositionAsync
+    // above talks straight to data.setNodePositions() -- this test is about what OrbView does
+    // with a getPosition hit for a node it has never seen, not about the library's own
+    // change-detection (UpdatingNodes_PreservesExistingPositions already covers that path).
+    private Task MergeNodesAsync(params string[] ids)
+        => _page.EvaluateAsync(
+            "(ids) => window.__orbTestView.data.merge({ nodes: ids.map(id => ({ id })), edges: [] })",
+            ids);
 }

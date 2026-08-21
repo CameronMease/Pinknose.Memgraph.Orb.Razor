@@ -18,6 +18,17 @@
     Styling: @_styling.ToString().ToLowerInvariant()
 </button>
 
+@* Test-only control, not a feature a real host would need: NodePositionBehaviourTests uses it
+   to reach SetSeedPositionsAsync. window.__orbTestView exposes Orb's own view object, which is
+   enough to drive setNodePositions/merge/etc. directly from JS -- but the position map
+   getPosition reads lives on the JS "handle" object this component holds, which nothing on
+   window exposes. Going through the real component method is also more faithful than
+   reinventing the interop call in the test. *@
+<input id="seed-id-input" @bind="_seedId" @bind:event="oninput" placeholder="seed node id" />
+<input id="seed-x-input" type="number" @bind="_seedX" @bind:event="oninput" placeholder="seed x" />
+<input id="seed-y-input" type="number" @bind="_seedY" @bind:event="oninput" placeholder="seed y" />
+<button id="seed-btn" class="btn btn-secondary" @onclick="SeedPositionAsync">Seed position</button>
+
 <OrbGraph TNode="Person" TEdge="Relationship"
           @ref="_graph"
           Nodes="@_people"
@@ -74,6 +85,9 @@
     private Person? _selected;
     private Person? _hovered;
     private StylingMode _styling = StylingMode.Full;
+    private string _seedId = "";
+    private double _seedX;
+    private double _seedY;
 
     private List<Person> _people = [];
     private List<Relationship> _relationships = [];
@@ -120,6 +134,18 @@
         if (_graph is not null)
         {
             await _graph.RecenterAsync();
+        }
+    }
+
+    // Test-only control (see the button's markup comment above). Deliberately calls
+    // SetSeedPositionsAsync directly rather than adding a node to _people at the same time:
+    // NodePositionBehaviourTests seeds and merges as two separate steps, exactly as
+    // SeedingIsMergedNotReplaced needs to for its two independent seed calls.
+    private async Task SeedPositionAsync()
+    {
+        if (_graph is not null && !string.IsNullOrWhiteSpace(_seedId))
+        {
+            await _graph.SetSeedPositionsAsync([new OrbNodePosition(_seedId, _seedX, _seedY)]);
         }
     }
 
