@@ -15,9 +15,11 @@ so a report was guaranteed to occur, held exactly where it was placed for 2 full
 back a little," exactly unmoved. A companion check forcing two nodes to the same coordinate under that
 same hot simulation produced zero many-body repulsion either, which rules out "physics silently is not
 running" as the explanation: `setNodePositions` writes are simply invisible to the simulator, running
-or not. See `tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/NodePositionBehaviourTests.cs` and
-`.superpowers/sdd/2026-08-21-incremental-updates-and-positions/task-1-report.md` for the full
-measurement, including the controls.
+or not. See `tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/NodePositionBehaviourTests.cs` for the
+committed measurement. The controls that ruled out "physics silently was not running" — forcing two
+nodes coincident under the same hot simulation and seeing no repulsion — were scratch
+instrumentation and are not committed; what replaced them durably is the assertion in that file that
+`isPhysicsEnabled` is observably true before the measurement runs.
 
 This simplifies rather than complicates the design: `setNodePositions` is durable unconditionally, not
 only when physics is off. The distinction from `getPosition` (below) still stands and still matters —
@@ -253,7 +255,7 @@ position rather than sticky coordinates and so would be overwritten as soon as t
 reports while physics is running. Task 1 measured it directly instead of documenting the inference:
 it does not get overwritten, running physics or not. `setNodePositions` is simply not a route the
 simulator observes at all — not "durable only while physics is off," durable unconditionally. See
-`.superpowers/sdd/2026-08-21-incremental-updates-and-positions/task-1-report.md` for the measurement.
+`tests/Pinknose.Memgraph.Orb.Razor.BrowserTests/NodePositionBehaviourTests.cs` for the measurement.
 
 This still is not the mechanism for influencing a *running* force layout — a node moved this way sits
 at the given coordinate exactly because the simulator never sees it, so it also never joins in physics
