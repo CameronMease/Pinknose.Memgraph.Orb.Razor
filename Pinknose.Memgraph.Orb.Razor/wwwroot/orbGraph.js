@@ -205,8 +205,15 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
     // hands back a deep copy, and the alternative, hardcoding Orb's defaults here, would rot
     // silently the first time Orb changed one.
     const settings = parseJson(settingsJson);
-    const view = new OrbView(host);
-    const handle = { view, host, dotNetRef, defaultSettings: view.getSettings() };
+    const positions = new Map();
+    const view = new OrbView(host, {
+        // Read on every setup and merge, for the nodes being added. This is what decides where a
+        // node ENTERS the simulation -- setNodePositions writes the rendered position directly and
+        // the simulator never observes it, so that write holds even under a hot simulation
+        // (measured in Task 1; see the XML doc on SetNodePositionsAsync).
+        getPosition: (node) => positions.get(String(node.getId())),
+    });
+    const handle = { view, host, dotNetRef, positions, defaultSettings: view.getSettings() };
 
     if (settings) {
         view.setSettings(settings);
@@ -220,6 +227,7 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
 
     subscribe(handle, subscribedEvents);
     view.render(() => view.recenter());
+    installPositionHook(handle);
 
     // Opt-in test seam: the browser suite needs to inspect graph state and node positions,
     // but this must never ship live on a real page. Setting it unconditionally would pin
@@ -232,6 +240,15 @@ export async function initializeOrb(host, dotNetRef, settingsJson, dataJson, sub
     }
 
     return handle;
+}
+
+// Re-asserts the position hook after any settings change. setSettings merges and resetSettings
+// re-applies a snapshot; neither is guaranteed to carry a function member through Orb's own
+// copying. Re-installing is cheap and removes the question entirely.
+function installPositionHook(handle) {
+    handle.view.setSettings({
+        getPosition: (node) => handle.positions.get(String(node.getId())),
+    });
 }
 
 export function updateData(handle, dataJson, removedNodeIds, removedEdgeIds) {
@@ -247,6 +264,15 @@ export function updateData(handle, dataJson, removedNodeIds, removedEdgeIds) {
             nodeIds: removedNodeIds ?? [],
             edgeIds: removedEdgeIds ?? []
         });
+
+        // Otherwise a removed node's seed outlives the node itself: a later, unrelated re-add of
+        // the same id would silently enter at whatever coordinate was seeded for the earlier
+        // instance, and the map would grow without bound over a long-lived circuit that keeps
+        // adding and removing nodes. Ids are stored coerced with String(...) (see
+        // setSeedPositions), so match that here.
+        for (const id of removedNodeIds ?? []) {
+            handle.positions.delete(String(id));
+        }
     }
 
     if (payload) {
@@ -260,6 +286,7 @@ export function applySettings(handle, settingsJson) {
     const settings = parseJson(settingsJson);
     if (handle && settings) {
         handle.view.setSettings(settings);
+        installPositionHook(handle);
     }
 }
 
@@ -267,7 +294,38 @@ export function applySettings(handle, settingsJson) {
 export function resetSettings(handle) {
     if (handle) {
         handle.view.setSettings(handle.defaultSettings);
+        installPositionHook(handle);
     }
+}
+
+// Merges rather than replaces, so a caller seeding newly arrived nodes need not restate the ones
+// already placed -- which is the accumulating case this exists for.
+export function setSeedPositions(handle, positions) {
+    if (!handle || !positions) return;
+
+    for (const p of positions) {
+        handle.positions.set(String(p.id), { x: p.x, y: p.y });
+    }
+}
+
+export function clearSeedPositions(handle) {
+    handle?.positions.clear();
+}
+
+// Writes the rendered position directly. The simulator never sees this -- it is not read by
+// getPosition or _assignPositions, so it holds even under a hot simulation (measured in Task 1).
+export function setNodePositions(handle, positions) {
+    if (!handle || !positions?.length) return;
+
+    handle.view.data.setNodePositions(positions);
+    handle.view.render();
+}
+
+export function clearNodePositions(handle) {
+    if (!handle) return;
+
+    handle.view.data.clearPositions();
+    handle.view.render();
 }
 
 export function recenter(handle)      { handle?.view.recenter(); }
@@ -301,4 +359,5 @@ export function disposeOrb(handle) {
 
     handle.view = null;
     handle.dotNetRef = null;
+    handle.positions?.clear();
 }

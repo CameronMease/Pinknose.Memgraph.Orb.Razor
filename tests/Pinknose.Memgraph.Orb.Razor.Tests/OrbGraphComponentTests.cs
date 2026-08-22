@@ -114,6 +114,108 @@ public class OrbGraphComponentTests : BunitContext
     }
 
     [TestMethod]
+    public void SecondUpdate_SendsOnlyTheNewNodes()
+    {
+        // The regression guard that matters. The defect this prevents is payload size, so nothing
+        // fails when it comes back -- without this test the fix is asserted rather than shown.
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1") })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        cut.Render(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1"), new OrbNode("n2") })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        var update = module.Invocations["updateData"].Single();
+        var dataJson = (string?)update.Arguments[1];
+
+        StringAssert.Contains(dataJson!, "\"id\":\"n2\"");
+        Assert.IsFalse(
+            dataJson!.Contains("\"id\":\"n1\"", StringComparison.Ordinal),
+            "n1 was already on screen and unchanged, so re-sending it is the bug this prevents.");
+    }
+
+    [TestMethod]
+    public void AnUpdateChangingOneNodesStyle_SendsThatNodeAndNoOther()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1"), new OrbNode("n2") })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        cut.Render(p => p
+            .Add(x => x.Nodes, new[]
+            {
+                new OrbNode("n1") { Style = new OrbNodeStyle { Color = "#f00" } },
+                new OrbNode("n2"),
+            })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        var dataJson = (string?)module.Invocations["updateData"].Single().Arguments[1];
+
+        StringAssert.Contains(dataJson!, "\"id\":\"n1\"");
+        Assert.IsFalse(dataJson!.Contains("\"id\":\"n2\"", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void AnUpdateChangingNothing_DoesNotCallIntoJavaScript()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        cut.Render(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1"), new OrbNode("n2") })
+            .Add(x => x.Edges, new[] { new OrbEdge("e1", "n1", "n2") }));
+
+        Assert.IsFalse(module.Invocations.Identifiers.Contains("updateData"));
+    }
+
+    [TestMethod]
+    public void ARemovalStillReachesTheView_EvenWithNothingAdded()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        cut.Render(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1") })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        var removedNodeIds = (string[]?)module.Invocations["updateData"].Single().Arguments[2];
+
+        CollectionAssert.AreEquivalent(new[] { "n2" }, removedNodeIds);
+    }
+
+    [TestMethod]
+    public void TheFirstUpdateAfterRender_DoesNotResendWhatSetupAlreadySent()
+    {
+        // Guards the seam between the two paths. If first render does not record what it sent,
+        // everything looks changed on the first update and the whole graph goes again -- the
+        // original bug, delayed by exactly one render.
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1") })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        cut.Render(p => p
+            .Add(x => x.Nodes, new[] { new OrbNode("n1"), new OrbNode("n2") })
+            .Add(x => x.Edges, Array.Empty<OrbEdge>()));
+
+        var dataJson = (string?)module.Invocations["updateData"].Single().Arguments[1];
+
+        Assert.IsFalse(dataJson!.Contains("\"id\":\"n1\"", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task NodeClickFromJs_InvokesCallbackWithOriginalInstance()
     {
         SetupModule();
@@ -161,5 +263,47 @@ public class OrbGraphComponentTests : BunitContext
 
         Assert.IsFalse(module.Invocations.Identifiers.Contains("recenter"),
             "disposal must short-circuit before the call reaches interop");
+    }
+
+    [TestMethod]
+    public async Task SetSeedPositionsAsync_SendsTheCoordinatesToTheMap()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        await cut.Instance.SetSeedPositionsAsync([new OrbNodePosition("n1", 10, 20)]);
+
+        Assert.AreEqual(1, module.Invocations["setSeedPositions"].Count);
+    }
+
+    [TestMethod]
+    public async Task SetSeedPositionsAsync_AnEmptyBatch_DoesNotCallIntoJavaScript()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        await cut.Instance.SetSeedPositionsAsync([]);
+
+        Assert.IsFalse(module.Invocations.Identifiers.Contains("setSeedPositions"));
+    }
+
+    [TestMethod]
+    public async Task SetNodePositionsAsync_ReachesTheGraph()
+    {
+        var module = SetupModule();
+
+        var cut = Render<OrbGraph<OrbNode, OrbEdge>>(p => p
+            .Add(x => x.Nodes, TwoNodes)
+            .Add(x => x.Edges, OneEdge));
+
+        await cut.Instance.SetNodePositionsAsync([new OrbNodePosition("n1", 10, 20)]);
+
+        Assert.AreEqual(1, module.Invocations["setNodePositions"].Count);
     }
 }

@@ -29,6 +29,18 @@ internal sealed class OrbPageDriver(IPage page)
         }
         """;
 
+    // Shared by NodeHasPositionAsync (single check) and WaitForPositionAsync (polled via
+    // WaitForFunctionAsync) so the two agree on what "has a position" means. A node can appear
+    // in getNodePositions() with only its "id" -- no x/y -- when it exists but nothing has
+    // assigned it a position yet (see the comment on NodeHasPositionAsync below), so presence
+    // in the array is not enough; the x/y fields must actually be numbers.
+    private const string HasPositionScript = """
+        (id) => {
+            const p = window.__orbTestView.data.getNodePositions().find((p) => p.id === id);
+            return !!p && typeof p.x === 'number' && typeof p.y === 'number';
+        }
+        """;
+
     // getCenter() returns the node's position in Orb's *graph* (simulation) space, not canvas
     // pixels: Orb's canvas renderer draws with
     //   ctx.translate(transform.x, transform.y); ctx.scale(transform.k, transform.k);
@@ -128,11 +140,65 @@ internal sealed class OrbPageDriver(IPage page)
         {
             if (element.GetProperty("id").GetString() == id)
             {
-                return (element.GetProperty("x").GetDouble(), element.GetProperty("y").GetDouble());
+                // A node can be present in the snapshot with only its "id" -- x/y are omitted
+                // by JSON.stringify, not nulled, whenever Orb hasn't assigned the node a
+                // position yet (e.g. it was just added/merged and the simulator hasn't ticked).
+                // That is a different failure from "no such node" and callers that hit it need
+                // to know to wait (see WaitForPositionAsync/NodeHasPositionAsync) rather than
+                // see a bare KeyNotFoundException surfacing from deep inside System.Text.Json.
+                if (!element.TryGetProperty("x", out var xProp)
+                    || !element.TryGetProperty("y", out var yProp))
+                {
+                    throw new InvalidOperationException(
+                        $"Node '{id}' exists in the position snapshot but has no x/y yet " +
+                        "(a position has not been assigned to it). Call WaitForPositionAsync " +
+                        "(or poll NodeHasPositionAsync) before reading a position that may not " +
+                        "exist yet -- e.g. right after adding or merging a node.");
+                }
+
+                return (xProp.GetDouble(), yProp.GetDouble());
             }
         }
 
         throw new InvalidOperationException($"No node with id '{id}' in the position snapshot.");
+    }
+
+    // Orb's clearPosition() sets a node's x/y to undefined rather than removing the node, so
+    // ReadPositionAsync's GetProperty("x") is the wrong tool to detect that -- JSON.stringify
+    // omits an undefined property rather than nulling it, and GetProperty throws on a missing
+    // one. This checks presence directly instead.
+    public Task<bool> NodeHasPositionAsync(string id)
+        => page.EvaluateAsync<bool>(HasPositionScript, id);
+
+    /// <summary>
+    /// Polls until <paramref name="id"/> has a numeric x/y in Orb's position snapshot, or throws
+    /// once <paramref name="timeoutMs"/> elapses. A node's entry into a position -- whether from
+    /// a seed, Orb's own fallback layout, or the force simulation -- is not guaranteed to have
+    /// happened by the time an add/merge call returns (its completion only means the node
+    /// exists, not that it has been placed), so a caller that wants to read a just-created
+    /// node's position must wait for one explicitly instead of assuming it is already there.
+    /// </summary>
+    public async Task WaitForPositionAsync(string id, int timeoutMs = 5000)
+    {
+        try
+        {
+            await page.WaitForFunctionAsync(
+                HasPositionScript,
+                id,
+                new PageWaitForFunctionOptions { Timeout = timeoutMs });
+        }
+        catch (PlaywrightException ex)
+        {
+            // Playwright .NET 1.62 has no dedicated timeout exception type -- a timed-out
+            // WaitForFunctionAsync throws the same PlaywrightException as any other page-script
+            // failure, just with a "Timeout ...ms exceeded" message. Re-throw as
+            // System.TimeoutException (qualified: ImplicitUsings' global `using System;` plus
+            // this file's `using Microsoft.Playwright;` makes a bare "TimeoutException"
+            // ambiguous) so callers get a specific, useful failure naming the node and the
+            // timeout instead of a generic Playwright error.
+            throw new System.TimeoutException(
+                $"Node '{id}' did not receive a position within {timeoutMs}ms.", ex);
+        }
     }
 
     public static double Distance((double X, double Y) a, (double X, double Y) b)

@@ -28,7 +28,8 @@
 
     private Dictionary<string, TNode> _sentNodes = [];
     private Dictionary<string, TEdge> _sentEdges = [];
-    private string? _lastDataJson;
+    private Dictionary<string, string> _sentNodeJson = [];
+    private Dictionary<string, string> _sentEdgeJson = [];
     private string? _lastSettingsJson;
     private bool _disposed;
 
@@ -169,7 +170,10 @@
 
             _sentNodes = projection.NodesById;
             _sentEdges = projection.EdgesById;
-            _lastDataJson = dataJson;
+            _sentNodeJson = projection.Payload.Nodes.ToDictionary(
+                n => n.Id, OrbJson.SerializeNode, StringComparer.Ordinal);
+            _sentEdgeJson = projection.Payload.Edges.ToDictionary(
+                e => e.Id, OrbJson.SerializeEdge, StringComparer.Ordinal);
             _lastSettingsJson = settingsJson;
 
             if (_disposed)
@@ -216,30 +220,54 @@
             if (projection is null)
             {
                 // A duplicate id must degrade this update, not crash the circuit. Leave
-                // the id->instance maps and _lastDataJson exactly as they were: the
+                // the id->instance maps and the sent-JSON maps exactly as they were: the
                 // consumer's data is invalid right now, so there is nothing valid to
                 // record, and the previous good state must keep serving events.
                 return;
             }
 
-            var dataJson = OrbJson.SerializeGraph(projection.Payload);
+            var nodeJson = projection.Payload.Nodes.ToDictionary(
+                n => n.Id, OrbJson.SerializeNode, StringComparer.Ordinal);
+            var edgeJson = projection.Payload.Edges.ToDictionary(
+                e => e.Id, OrbJson.SerializeEdge, StringComparer.Ordinal);
 
+            var changedNodeIds = OrbGraphDiff.ChangedIds(_sentNodeJson, nodeJson);
+            var changedEdgeIds = OrbGraphDiff.ChangedIds(_sentEdgeJson, edgeJson);
             var removedNodeIds = OrbGraphDiff.RemovedIds(_sentNodes.Keys, projection.NodesById.Keys);
             var removedEdgeIds = OrbGraphDiff.RemovedIds(_sentEdges.Keys, projection.EdgesById.Keys);
 
             // The id->instance maps must be refreshed whenever we have a fresh projection,
-            // even if dataJson is identical to last time. The JSON only carries id/endpoints
-            // /style/label, so a consumer that reloaded Nodes with an unprojected field
-            // changed (e.g. a domain property not sent to Orb) would otherwise leave these
-            // maps pointing at superseded instances forever, and OnNodeClick etc. would keep
-            // handing back stale objects.
+            // even if nothing changed. The JSON only carries id/endpoints/style/label, so a
+            // consumer that reloaded Nodes with an unprojected field changed (e.g. a domain
+            // property not sent to Orb) would otherwise leave these maps pointing at
+            // superseded instances forever, and OnNodeClick etc. would keep handing back
+            // stale objects.
             _sentNodes = projection.NodesById;
             _sentEdges = projection.EdgesById;
 
-            if (dataJson != _lastDataJson || removedNodeIds.Length > 0 || removedEdgeIds.Length > 0)
+            if (changedNodeIds.Length > 0 || changedEdgeIds.Length > 0
+                || removedNodeIds.Length > 0 || removedEdgeIds.Length > 0)
             {
-                await _module!.InvokeVoidAsync("updateData", _handle, dataJson, removedNodeIds, removedEdgeIds);
-                _lastDataJson = dataJson;
+                // Only the changed subset goes over the wire. Orb's merge() upserts, so a node it
+                // already holds and that did not change needs no mention.
+                var changedNodes = new HashSet<string>(changedNodeIds, StringComparer.Ordinal);
+                var changedEdges = new HashSet<string>(changedEdgeIds, StringComparer.Ordinal);
+
+                var delta = new OrbGraphPayload
+                {
+                    Nodes = [.. projection.Payload.Nodes.Where(n => changedNodes.Contains(n.Id))],
+                    Edges = [.. projection.Payload.Edges.Where(e => changedEdges.Contains(e.Id))],
+                };
+
+                await _module!.InvokeVoidAsync(
+                    "updateData", _handle, OrbJson.SerializeGraph(delta), removedNodeIds, removedEdgeIds);
+
+                // Only recorded once the interop call has actually succeeded. If updateData
+                // throws (a JSException from Orb's merge, or JSDisconnectedException), Orb never
+                // received this delta -- so the next diff must still see these ids as changed and
+                // resend them, rather than believing they are already on screen.
+                _sentNodeJson = nodeJson;
+                _sentEdgeJson = edgeJson;
             }
 
             var settingsJson = Settings is null ? null : OrbJson.SerializeSettings(Settings);
@@ -416,6 +444,68 @@
     /// <summary>Selects an edge, as clicking it would.</summary>
     /// <param name="id">The <see cref="IOrbEdge.Id"/> of the edge to select.</param>
     public async ValueTask SelectEdgeAsync(string id) => await InvokeViewAsync("selectEdge", id);
+
+    /// <summary>
+    /// Sets where nodes <b>enter</b> the simulation. Merges into what was seeded before, so a
+    /// caller seeding newly arriving nodes need not restate the ones already placed.
+    /// </summary>
+    /// <remarks>
+    /// Orb reads these coordinates when a node is set up or merged, and hands the result to the
+    /// simulator -- so a seeded node starts where it was told. It does not stay there: physics
+    /// moves it like any other node from that point on, which is why this is <c>Seed</c> and not
+    /// <c>Set</c>. To place a node and have it hold regardless of the simulation, use
+    /// <see cref="SetNodePositionsAsync"/> instead.
+    /// </remarks>
+    /// <param name="positions">The coordinates to seed. An empty sequence is a no-op.</param>
+    public async ValueTask SetSeedPositionsAsync(IEnumerable<OrbNodePosition> positions)
+    {
+        var batch = positions as ICollection<OrbNodePosition> ?? positions.ToList();
+
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        await InvokeViewAsync("setSeedPositions", batch);
+    }
+
+    /// <summary>Forgets every seeded position. Nodes already placed are not moved.</summary>
+    public async ValueTask ClearSeedPositionsAsync() => await InvokeViewAsync("clearSeedPositions");
+
+    /// <summary>Moves nodes already in the graph, writing the rendered position directly.</summary>
+    /// <remarks>
+    /// This position is durable unconditionally, whether or not the force simulation is running:
+    /// measured (not merely inferred from source) placing a node far outside the graph under a
+    /// permanently hot simulation and finding it held bit-exact. The simulator simply never
+    /// observes a write made this way, so there is nothing for it to overwrite. This is not the
+    /// way to influence where a node lands as it enters a <i>running</i> layout and then continues
+    /// moving under physics -- for that, use <see cref="SetSeedPositionsAsync"/>.
+    /// </remarks>
+    /// <param name="positions">The coordinates to write. An empty sequence is a no-op.</param>
+    public async ValueTask SetNodePositionsAsync(IEnumerable<OrbNodePosition> positions)
+    {
+        var batch = positions as ICollection<OrbNodePosition> ?? positions.ToList();
+
+        if (batch.Count == 0)
+        {
+            return;
+        }
+
+        await InvokeViewAsync("setNodePositions", batch);
+    }
+
+    /// <summary>
+    /// Clears the rendered position of <b>every</b> node in the graph, not only the ones this
+    /// component set through <see cref="SetNodePositionsAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// This calls Orb's own <c>clearPositions()</c>, which walks every node it holds and blanks
+    /// its coordinates -- including positions the force simulation itself computed. With physics
+    /// disabled (the common case; see <see cref="SetNodePositionsAsync"/>) nothing recomputes
+    /// them afterward, so calling this wipes the whole layout, not just one node's override.
+    /// There is no per-id variant.
+    /// </remarks>
+    public async ValueTask ClearNodePositionsAsync() => await InvokeViewAsync("clearNodePositions");
 
     /// <summary>Exports the current view as SVG markup.</summary>
     /// <returns>

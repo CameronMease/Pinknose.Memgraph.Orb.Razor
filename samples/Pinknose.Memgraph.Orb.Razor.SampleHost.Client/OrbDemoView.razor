@@ -18,6 +18,45 @@
     Styling: @_styling.ToString().ToLowerInvariant()
 </button>
 
+@* Test-only control, not a feature a real host would need: NodePositionBehaviourTests uses it
+   to reach SetSeedPositionsAsync. window.__orbTestView exposes Orb's own view object, which is
+   enough to drive setNodePositions/merge/etc. directly from JS -- but the position map
+   getPosition reads lives on the JS "handle" object this component holds, which nothing on
+   window exposes. Going through the real component method is also more faithful than
+   reinventing the interop call in the test.
+
+   Gated behind ?seedTest=true rather than always rendered, for the same reason orbGraph.js
+   only creates window.__orbTestView when the host carries data-orb-test: a test seam should
+   not exist on a normal run of the sample. data-orb-test itself is consumed purely on the JS
+   side (host.hasAttribute in orbGraph.js) and is already relied on, unconditioned, by every
+   other browser test in the suite -- conditioning it here would mean also touching every one
+   of those tests' navigation just to keep them passing. The query-string opt-in already used
+   for ?styling= above is this file's existing equivalent for gating a Razor-rendered surface,
+   so this reuses that mechanism rather than inventing a third one. *@
+@if (_seedControlsEnabled)
+{
+    <input id="seed-id-input" @bind="_seedId" @bind:event="oninput" placeholder="seed node id" />
+    <input id="seed-x-input" type="number" @bind="_seedX" @bind:event="oninput" placeholder="seed x" />
+    <input id="seed-y-input" type="number" @bind="_seedY" @bind:event="oninput" placeholder="seed y" />
+    <button id="seed-btn" class="btn btn-secondary" @onclick="SeedPositionAsync">Seed position</button>
+
+    @* Same test-only rationale as the seed controls above: NodePositionBehaviourTests needs to
+       drive the real component method (not window.__orbTestView, which has no notion of a
+       ClearNodePositionsAsync distinct from Orb's own view) to prove what it actually clears. *@
+    <button id="clear-positions-btn" class="btn btn-secondary" @onclick="ClearNodePositionsAsync">
+        Clear node positions
+    </button>
+
+    @* Generic add/remove-by-id, alongside the fixed "Remove Carol" button above: proving the
+       seed map does not survive a node's removal needs a node this test controls the id of, added
+       and removed through the real Nodes-list path (raw Orb data.merge()/data.remove() calls, as
+       ANodeMergedAfterItsSeedWasSet_EntersAtThatCoordinate uses, never reach
+       OrbGraph.PushChangesAsync's removal branch at all). *@
+    <input id="node-id-input" @bind="_nodeId" @bind:event="oninput" placeholder="node id" />
+    <button id="add-node-btn" class="btn btn-secondary" @onclick="AddNode">Add node</button>
+    <button id="remove-node-btn" class="btn btn-secondary" @onclick="RemoveNode">Remove node</button>
+}
+
 <OrbGraph TNode="Person" TEdge="Relationship"
           @ref="_graph"
           Nodes="@_people"
@@ -74,6 +113,11 @@
     private Person? _selected;
     private Person? _hovered;
     private StylingMode _styling = StylingMode.Full;
+    private bool _seedControlsEnabled;
+    private string _seedId = "";
+    private double _seedX;
+    private double _seedY;
+    private string _nodeId = "";
 
     private List<Person> _people = [];
     private List<Relationship> _relationships = [];
@@ -101,6 +145,9 @@
             _styling = mode;
         }
 
+        _seedControlsEnabled = string.Equals(
+            QueryValue(Nav.Uri, "seedTest"), "true", StringComparison.OrdinalIgnoreCase);
+
         _people =
         [
             new("n1", "Alice", true, _styling),
@@ -123,10 +170,51 @@
         }
     }
 
+    // Test-only control (see the button's markup comment above). Deliberately calls
+    // SetSeedPositionsAsync directly rather than adding a node to _people at the same time:
+    // NodePositionBehaviourTests seeds and merges as two separate steps, exactly as
+    // SeedingIsMergedNotReplaced needs to for its two independent seed calls.
+    private async Task SeedPositionAsync()
+    {
+        if (_graph is not null && !string.IsNullOrWhiteSpace(_seedId))
+        {
+            await _graph.SetSeedPositionsAsync([new OrbNodePosition(_seedId, _seedX, _seedY)]);
+        }
+    }
+
     private void RemoveCarol()
     {
         _people = [.. _people.Where(p => p.Id != "n3")];
         _relationships = [.. _relationships.Where(r => r.Start != "n3" && r.End != "n3")];
+    }
+
+    // Test-only control (see the markup comment above). Deliberately calls the real component
+    // method rather than window.__orbTestView, which exposes Orb's own view but not the seed map
+    // or a notion of "clear" distinct from Orb's -- this proves what the component's own method
+    // actually does.
+    private async Task ClearNodePositionsAsync()
+    {
+        if (_graph is not null)
+        {
+            await _graph.ClearNodePositionsAsync();
+        }
+    }
+
+    // Test-only controls (see the markup comment above): an id-driven add/remove, generalizing
+    // RemoveCarol so a test can add and remove a node whose id it chose, through the real
+    // Nodes-list path that drives OrbGraph.PushChangesAsync.
+    private void AddNode()
+    {
+        if (!string.IsNullOrWhiteSpace(_nodeId) && !_people.Any(p => p.Id == _nodeId))
+        {
+            _people = [.. _people, new Person(_nodeId, _nodeId, false, _styling)];
+        }
+    }
+
+    private void RemoveNode()
+    {
+        _people = [.. _people.Where(p => p.Id != _nodeId)];
+        _relationships = [.. _relationships.Where(r => r.Start != _nodeId && r.End != _nodeId)];
     }
 
     // Rebuilds every node and edge in the next mode. Full -> Labels -> None walks the two
