@@ -28,6 +28,22 @@ that cycles the same three modes.
 dotnet run --project samples/Pinknose.Memgraph.Orb.Razor.SampleHost
 ```
 
+## The demo
+
+`samples/Pinknose.Memgraph.Orb.Razor.Demo` is a standalone Blazor WebAssembly app, published to
+GitHub Pages at `/demo/` by the `docs` workflow. Standalone rather than a Blazor Web App because
+Pages is static hosting: there is no host process and nowhere for a SignalR circuit, so Server
+rendering cannot run there at all.
+
+```bash
+dotnet run --project samples/Pinknose.Memgraph.Orb.Razor.Demo
+```
+
+Two things about it are easy to break and produce a blank page rather than a failed build. The
+app is served from a sub-path, so the workflow rewrites `<base href="/">` at publish time (the
+source keeps `/` so local runs work), and the site needs a `.nojekyll` file or Pages hides every
+directory beginning with an underscore, which is `_framework` and `_content`.
+
 ## Running the tests
 
 ```bash

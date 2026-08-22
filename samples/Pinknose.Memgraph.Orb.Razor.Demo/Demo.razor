@@ -1,0 +1,227 @@
+@inject IJSRuntime Js
+
+<PageTitle>Orb for Blazor — live demo</PageTitle>
+
+<div class="frame">
+    <header class="masthead">
+        <h1 class="masthead__name">Orb for Blazor</h1>
+        <p class="masthead__what">A force-directed graph, rendered from ordinary .NET types</p>
+        <nav class="masthead__links">
+            <a href="../">Docs</a>
+            <a href="https://www.nuget.org/packages/Pinknose.Memgraph.Orb.Razor">NuGet</a>
+            <a href="https://github.com/CameronMease/Pinknose.Memgraph.Orb.Razor">GitHub</a>
+        </nav>
+    </header>
+
+    <div class="workbench">
+        <aside class="panel">
+            <section>
+                <h2 class="group__title">Layout</h2>
+                <div class="choice">
+                    @foreach (var choice in Layouts)
+                    {
+                        <label>
+                            <input type="radio" name="layout" checked="@(_layout == choice.Key)"
+                                   @onchange="@(() => UseLayout(choice.Key))" />
+                            @choice.Label
+                        </label>
+                    }
+                </div>
+            </section>
+
+            <section>
+                <h2 class="group__title">Display</h2>
+                <div class="switches">
+                    <label class="switch">
+                        <input type="checkbox" checked="@_labels" @onchange="@(e => Toggle(e, v => _labels = v))" />
+                        Labels
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" checked="@_shadows" @onchange="@(e => Toggle(e, v => _shadows = v))" />
+                        Shadows
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" checked="@_drag" @onchange="@(e => Toggle(e, v => _drag = v))" />
+                        Drag nodes
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" checked="@_zoom" @onchange="@(e => Toggle(e, v => _zoom = v))" />
+                        Zoom and pan
+                    </label>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="group__title">View</h2>
+                <div class="actions">
+                    <button class="action" id="recenter" @onclick="@(() => _graph!.RecenterAsync())">Fit to view</button>
+                    <button class="action" @onclick="@(() => _graph!.ZoomInAsync())">Zoom in</button>
+                    <button class="action" @onclick="@(() => _graph!.ZoomOutAsync())">Zoom out</button>
+                    <button class="action" id="export" @onclick="ExportSvg">Export SVG</button>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="group__title">Legend</h2>
+                <div class="legend">
+                    @foreach (var kind in Enum.GetValues<ProjectKind>())
+                    {
+                        <div class="legend__row">
+                            <span class="legend__dot" style="background:@ColourOf(kind)"></span>
+                            @Describe(kind)
+                            <span class="legend__count">@SolutionGraph.Projects.Count(p => p.Kind == kind)</span>
+                        </div>
+                    }
+                </div>
+            </section>
+        </aside>
+
+        <main class="plate">
+            <div class="plate__graph">
+                <OrbGraph TNode="Project" TEdge="Dependency"
+                          @ref="_graph"
+                          Nodes="SolutionGraph.Projects"
+                          Edges="SolutionGraph.Dependencies"
+                          Height="100%"
+                          Settings="_settings"
+                          data-orb-test="true"
+                          OnNodeClick="@(e => Record("click", e.Node))"
+                          OnNodeHoverEnter="@(e => Record("hover", e.Node))"
+                          OnEdgeClick="@(e => Record("edge click", e.Edge))" />
+            </div>
+
+            <section class="log">
+                <div class="log__head">
+                    <h2 class="log__title">Events</h2>
+                    <p class="log__note">Your own instances, handed back from the graph</p>
+                    <button class="log__clear" @onclick="@(() => _log.Clear())">Clear</button>
+                </div>
+
+                <ul class="log__rows" id="event-log">
+                    @if (_log.Count == 0)
+                    {
+                        <li class="log__empty">Click or hover a node — events show up here.</li>
+                    }
+                    @foreach (var entry in _log)
+                    {
+                        <li class="log__row">
+                            <span class="log__time">@entry.At.ToString("HH:mm:ss")</span>
+                            <span class="log__kind">@entry.Kind</span>
+                            <span class="log__what">@entry.What</span>
+                            <span class="log__type">@entry.Type</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        </main>
+    </div>
+</div>
+
+@code {
+    private sealed record Entry(DateTime At, string Kind, string What, string Type);
+
+    private static readonly (string Key, string Label)[] Layouts =
+    [
+        ("force", "Force-directed"),
+        ("hierarchical", "Hierarchical"),
+        ("circular", "Circular"),
+        ("grid", "Grid")
+    ];
+
+    private OrbGraph<Project, Dependency>? _graph;
+    private readonly List<Entry> _log = [];
+
+    private string _layout = "force";
+    private bool _labels = true;
+    private bool _shadows = true;
+    private bool _drag = true;
+    private bool _zoom = true;
+
+    private OrbSettings _settings = null!;
+
+    protected override void OnInitialized() => Rebuild();
+
+    // The component fits the view once, before the force simulation has spread the graph out,
+    // so the first thing a visitor sees is a cluster in one corner. Fit again once it has
+    // settled. Deliberately not a loop: one correction, then the view is theirs.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(2500);
+            await _graph!.RecenterAsync();
+        }
+    }
+
+    // Rebuilt rather than mutated: the component compares the serialized settings to decide
+    // whether anything needs pushing, so a fresh object is what makes a change visible.
+    private void Rebuild() => _settings = new OrbSettings
+    {
+        Render = new OrbRenderSettings
+        {
+            LabelsIsEnabled = _labels,
+            ShadowIsEnabled = _shadows,
+            BackgroundColor = "#ffffff"
+        },
+        Interaction = new OrbInteractionSettings { IsDragEnabled = _drag, IsZoomEnabled = _zoom },
+        Layout = _layout switch
+        {
+            "grid" => new OrbGridLayout { RowGap = 60, ColGap = 90 },
+            "circular" => new OrbCircularLayout { Radius = 320 },
+            "hierarchical" => new OrbHierarchicalLayout { LevelGap = 120, NodeGap = 40 },
+            _ => new OrbForceLayout()
+        }
+    };
+
+    private void UseLayout(string key)
+    {
+        _layout = key;
+        Rebuild();
+        Add("layout", Layouts.First(l => l.Key == key).Label, "OrbSettings");
+    }
+
+    private void Toggle(ChangeEventArgs e, Action<bool> set)
+    {
+        set(e.Value is true);
+        Rebuild();
+    }
+
+    private void Record(string kind, Project node) => Add(kind, node.Name, nameof(Project));
+
+    private void Record(string kind, Dependency edge) => Add(kind, edge.Id, nameof(Dependency));
+
+    private void Add(string kind, string what, string type)
+    {
+        _log.Insert(0, new Entry(DateTime.Now, kind, what, type));
+
+        if (_log.Count > 40)
+        {
+            _log.RemoveAt(_log.Count - 1);
+        }
+    }
+
+    private async Task ExportSvg()
+    {
+        var svg = await _graph!.GetSvgAsync();
+
+        if (string.IsNullOrEmpty(svg))
+        {
+            Add("export", "nothing to export yet", "string");
+            return;
+        }
+
+        await Js.InvokeVoidAsync("orbDemo.download", "contoso-solution.svg", svg);
+        Add("export", $"contoso-solution.svg — {svg.Length:N0} characters", "string");
+    }
+
+    private static string ColourOf(ProjectKind kind) =>
+        new Project("legend", "legend", kind).Colour;
+
+    private static string Describe(ProjectKind kind) => kind switch
+    {
+        ProjectKind.App => "Applications",
+        ProjectKind.Library => "Projects",
+        ProjectKind.Package => "NuGet packages",
+        _ => "Test projects"
+    };
+}

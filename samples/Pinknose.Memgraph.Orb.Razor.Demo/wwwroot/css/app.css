@@ -1,0 +1,321 @@
+/*  Orb for Blazor — live demo
+    ---------------------------------------------------------------------------------------
+    The page is an instrument panel: the graph is the plate, everything else is chrome that
+    stays quiet around it. Measurements and readouts are set in mono because they are data,
+    not decoration.                                                                          */
+
+:root {
+    --paper: #eef1f4;
+    --plate: #ffffff;
+    --ink: #14202b;
+    --ink-soft: #55636f;
+    --rule: #c6d0d9;
+    --rule-soft: #dde3e9;
+    --draft: #1f5fa9;
+    --draft-wash: #e3ecf7;
+
+    /* Node kinds. Also used by the graph itself, so the legend cannot drift from the plot. */
+    --kind-app: #0e7c6b;
+    --kind-lib: #1f5fa9;
+    --kind-pkg: #8a6d1f;
+    --kind-test: #9a3f6b;
+
+    --panel: 19rem;
+    --gap: 1.25rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/*  Boot state ---------------------------------------------------------------------------- */
+
+.booting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    height: 100dvh;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+}
+
+.booting__mark {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--draft);
+    animation: pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.25; transform: scale(0.8); }
+    50%      { opacity: 1;    transform: scale(1); }
+}
+
+/*  Frame --------------------------------------------------------------------------------- */
+
+.frame {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+}
+
+.masthead {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--plate);
+}
+
+.masthead__name {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    letter-spacing: -0.015em;
+    margin: 0;
+}
+
+.masthead__what {
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+    margin: 0;
+}
+
+.masthead__links {
+    margin-left: auto;
+    display: flex;
+    gap: 1.25rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.masthead__links a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 1px;
+}
+
+.masthead__links a:hover,
+.masthead__links a:focus-visible { color: var(--draft); border-bottom-color: var(--draft); }
+
+/*  Body: panel + plate -------------------------------------------------------------------- */
+
+.workbench {
+    display: grid;
+    grid-template-columns: var(--panel) minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+}
+
+.panel {
+    border-right: 1px solid var(--rule);
+    background: var(--plate);
+    padding: var(--gap);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.group__title {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.6rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--rule-soft);
+}
+
+.choice { display: grid; gap: 0.15rem; }
+
+.choice label,
+.switch {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.3rem 0.35rem;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.choice label:hover,
+.switch:hover { background: var(--draft-wash); }
+
+.choice input,
+.switch input { accent-color: var(--draft); margin: 0; }
+
+.switches { display: grid; gap: 0.15rem; }
+
+.actions { display: grid; gap: 0.5rem; }
+
+.action {
+    font: inherit;
+    font-size: 0.875rem;
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    background: var(--plate);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.action:hover { border-color: var(--draft); color: var(--draft); }
+.action:active { background: var(--draft-wash); }
+
+.legend { display: grid; gap: 0.35rem; font-size: 0.8125rem; }
+
+.legend__row { display: flex; align-items: center; gap: 0.55rem; }
+
+.legend__dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex: none; }
+
+.legend__count {
+    margin-left: auto;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+}
+
+/*  Plate: the graph is the hero, sitting on drafting paper ---------------------------------- */
+
+.plate {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background-color: var(--paper);
+    background-image:
+        linear-gradient(to right, var(--rule-soft) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--rule-soft) 1px, transparent 1px);
+    background-size: 28px 28px;
+}
+
+.plate__graph { flex: 1; min-height: 0; padding: var(--gap); }
+
+.plate__graph .orb-graph {
+    height: 100%;
+    background: var(--plate);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+}
+
+/*  Event log: the signature readout ---------------------------------------------------------- */
+
+.log {
+    border-top: 1px solid var(--rule);
+    background: var(--plate);
+    height: 11rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.log__head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem var(--gap);
+    border-bottom: 1px solid var(--rule-soft);
+}
+
+.log__title {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0;
+}
+
+.log__note { font-size: 0.75rem; color: var(--ink-soft); margin: 0; }
+
+.log__clear {
+    margin-left: auto;
+    font: inherit;
+    font-size: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+}
+
+.log__clear:hover { color: var(--draft); background: var(--draft-wash); }
+
+.log__rows {
+    margin: 0;
+    padding: 0.4rem var(--gap) 0.75rem;
+    list-style: none;
+    overflow-y: auto;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.9;
+}
+
+.log__row { display: flex; gap: 1rem; animation: arrive 0.18s ease-out; }
+
+.log__time { color: var(--ink-soft); flex: none; }
+.log__kind { color: var(--draft); flex: none; width: 5.5rem; }
+.log__what { color: var(--ink); }
+.log__type { color: var(--ink-soft); }
+
+.log__empty {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+}
+
+@keyframes arrive {
+    from { opacity: 0; transform: translateY(-2px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/*  Blazor's own error strip ------------------------------------------------------------------ */
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 100;
+    padding: 0.75rem 1.5rem;
+    background: var(--ink);
+    color: var(--plate);
+    font-size: 0.875rem;
+}
+
+#blazor-error-ui .reload { color: var(--plate); margin-left: 0.75rem; }
+
+/*  Quality floor ----------------------------------------------------------------------------- */
+
+:focus-visible { outline: 2px solid var(--draft); outline-offset: 2px; }
+
+@media (max-width: 60rem) {
+    .workbench { grid-template-columns: 1fr; grid-template-rows: auto minmax(24rem, 1fr); }
+    .panel { border-right: none; border-bottom: 1px solid var(--rule); }
+    .masthead { flex-wrap: wrap; }
+    .masthead__links { width: 100%; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
